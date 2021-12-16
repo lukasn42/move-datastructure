@@ -110,22 +110,15 @@ class move_datastructure {
             int q_y = nodePairY->val->second;
             int d_y = nodePairY->succ->val->first - p_y;
 
-            // find the first input interval [p_z, p_z + d_z - 1], associated with the pair (p_z, q_z), that is connected to
-            // [q_y, q_y + d_y - 1] in the permutation graph
-            auto *nodePairZ = nodePairNew;
-            while (nodePairZ->pred != NULL && nodePairZ->pred->val->first >= q_y) { // in O(1)
-                nodePairZ = nodePairZ->pred;
-            }
-
             // check if [q_y, q_y + d_y - 1] has more than 3 incoming edges
-            // and insert ((p_z, q_z), (p_y, q_y)) into T_e if it does, since it suffices the requirements of pairs in T_e
-            if (has4IncEdges(nodePairZ,q_y + d_y - 1)) { // in O(1)
-                T_e.insert(new te_node(nodePairZ,nodePairY)); // in O(log k)
+            // and insert ((p_j + d_1, q_j + d_1), (p_y, q_y)) into T_e if it does, since it suffices the requirements of pairs in T_e
+            if (has4IncEdges(nodePairNew,q_y + d_y - 1)) { // in O(1)
+                T_e.insert(new te_node(nodePairNew,nodePairY)); // in O(log k)
             }
 
-            // the newly added output interval [q_j + d_1, q_j + d_1 + d_2 - 1] associated with the pair (p_j + d_1, q_j + d_1 + d_2)
-            // possibly has more than 4 incoming edges as well, if [q_j, q_j + d_j - 1] had more than 6 incoming edges in the permutation graph
-            // or if [q_y, q_y + d_y - 1] = [q_j + d_1, q_j + d_1 + d_2 - 1], but then it has already been dealt with
+            // the newly added output interval [q_j + d_1, q_j + d_1 + d_2 - 1] associated with the pair (p_j + d_1, q_j + d_1)
+            // possibly has more than 4 incoming edges as well, if [q_j, q_j + d_j - 1] had at least 6 incoming edges in the permutation graph
+            // before this iteraton or if it equals [q_y, q_y + d_y - 1], but then it has already been dealt with
             if (q_y != q_j + d_1 && has4IncEdges(nodeXp2,q_j + d_j - 1)) {
                 T_e.insert(new te_node(nodeXp2,nodePairNew)); // in O(log k)
             }
@@ -145,8 +138,7 @@ class move_datastructure {
         pairCur = L_pairs.getHead();
         D_index.resize(k);
         for (int i=0; i<k; i++) { // in O(k log k)
-            // find the input interval [p_j,p_j+d_j-1], q_i is in
-            D_index[i] = inputInterval(pairCur->val->second);
+            D_index[i] = inputInterval(pairCur->val->second); // find the input interval [p_j,p_j+d_j-1], q_i is in, in O(log k)
             pairCur = pairCur->succ;
         }
 
@@ -158,17 +150,17 @@ class move_datastructure {
     }
 
     int inputInterval(int q_i) { // returns maximum integer i, so that p_i <= q_j, in O(k)
-        return inputInterval(q_i,0,k-1);
+        return binSearchMaxLessOrEqual(q_i,0,k-1);
     }
 
-    int inputInterval(int q_i, int l, int r) { // in O(r-l+1)
+    int binSearchMaxLessOrEqual(int x, int l, int r) { // returns the greatest position y \in [l,r] with value <= x, in O(r-l+1)
         int m = (l+r)/2+1;
         if (l == r) {
             return l;
-        } else if (D_pair[m].first > q_i) {
-            return inputInterval(q_i,l,m-1);
+        } else if (D_pair[m].first > x) {
+            return binSearchMaxLessOrEqual(x,l,m-1);
         } else {
-            return inputInterval(q_i,m,r);
+            return binSearchMaxLessOrEqual(x,m,r);
         }
     }
 
