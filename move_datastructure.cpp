@@ -81,7 +81,7 @@ class move_datastructure {
             // the current pair's input interval in nodePairX starts in [q_j, q_j + d_j - 1], but it is possible that
             // there are input intervals which were created that start between it and q_j
             // if they exist, they are directly before nodePairX in L_pairs
-            while (nodePairX->pred != NULL && nodePairX->pred->val->first >= p_j) { // in O(1)
+            while (nodePairX->pred != NULL && nodePairX->pred->val->first >= q_j) { // in O(1)
                 nodePairX = nodePairX->pred;
             }
 
@@ -105,7 +105,7 @@ class move_datastructure {
 
             // now the output interval, p_j + d_1 starts in, possibly has more incoming edges than before
             // find the output interval [q_y, q_y + d_y - 1] containing p_j + d_1 associated with the pair (p_y, q_y)
-            auto *nodePairY = T_out.maxElemLessOrEqual(new pair_node {new std::pair<int,int>(0, q_j + d_1)})->v; // in O(log k)
+            auto *nodePairY = T_out.maxElemLessOrEqual(new pair_node {new std::pair<int,int>(0, p_j + d_1)})->v; // in O(log k)
             int p_y = nodePairY->val->first;
             int q_y = nodePairY->val->second;
             int d_y = nodePairY->succ->val->first - p_y;
@@ -239,7 +239,7 @@ class move_datastructure {
     void print() {
         std::cout << "k = " << k << std::endl;
 
-        if (k <= 10) {
+        if (k <= 200) {
             std::cout << std::endl;
 
             std::cout << "p = (";
