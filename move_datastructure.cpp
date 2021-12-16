@@ -4,51 +4,12 @@
 #include <cstdint>
 #include <vector>
 #include <algorithm>
+#include <functional>
 
 #include "avl_tree.cpp"
+#include "dl_list.cpp"
 
-struct pairP {
-    int p;
-    int q;
-    operator std::string() const {
-        return "(" + std::to_string(p) + "," + std::to_string(q) + ")";
-    }
-    bool operator==(pairP otherpairP) {
-        return otherpairP.p == p;
-    };
-    bool operator<(pairP otherpairP) {
-        return otherpairP.p > p;
-    };
-    bool operator>(pairP otherpairP) {
-        return !operator<(otherpairP) && !operator==(otherpairP);
-    }
-    bool operator>=(pairP otherpairP) {
-        return !operator<(otherpairP);
-    }
-    bool operator<=(pairP otherpairP) {
-        return !operator>(otherpairP);
-    }
-};
-
-struct pairQ {
-    int p;
-    int q;
-    bool operator==(pairQ otherpairQ) {
-        return otherpairQ.q == q;
-    };
-    bool operator<(pairQ otherpairQ) {
-        return otherpairQ.q > q;
-    };
-    bool operator>(pairQ otherpairQ) {
-        return !operator<(otherpairQ) && !operator==(otherpairQ);
-    }
-    bool operator>=(pairQ otherpairQ) {
-        return !operator<(otherpairQ);
-    }
-    bool operator<=(pairQ otherpairQ) {
-        return !operator>(otherpairQ);
-    }
-};
+using pair_node = dll_node<std::pair<int,int>>;
 
 class move_datastructure {
     public:
@@ -56,90 +17,182 @@ class move_datastructure {
     std::vector<std::pair<int,int>> D_pair; // stores the pairs (p_i, q_i)
     std::vector<int> D_index; // stores index j at i, if q_i is in the j-th input interval
 
-    avl_tree<pairP> T_in = avl_tree<pairP>();
-    avl_tree<pairQ> T_out = avl_tree<pairQ>();
-    avl_tree<pairP> T_e = avl_tree<pairP>();
+    std::function<bool(pair_node*,pair_node*)> ltP = [](pair_node *n1, pair_node *n2){return n1->val->first < n2->val->first;};
+    std::function<bool(pair_node*,pair_node*)> gtP = [](pair_node *n1, pair_node *n2){return n1->val->first > n2->val->first;};
+    std::function<bool(pair_node*,pair_node*)> eqP = [](pair_node *n1, pair_node *n2){return n1->val->first == n2->val->first;};
+
+    std::function<bool(pair_node*,pair_node*)> ltQ = [](pair_node *n1, pair_node *n2){return n1->val->second < n2->val->second;};
+    std::function<bool(pair_node*,pair_node*)> gtQ = [](pair_node *n1, pair_node *n2){return n1->val->second > n2->val->second;};
+    std::function<bool(pair_node*,pair_node*)> eqQ = [](pair_node *n1, pair_node *n2){return n1->val->second == n2->val->second;};
+
+    avl_tree<pair_node> T_in = avl_tree<pair_node>(ltP,gtP,eqP); // contains all pairs ordered by p_i
+    avl_tree<pair_node> T_out = avl_tree<pair_node>(ltQ,gtQ,eqQ); // contains all pairs ordered by q_i
+
+    std::function<bool(std::pair<pair_node*,pair_node*>*,std::pair<pair_node*,pair_node*>*)> ltP_ = [](std::pair<pair_node*,pair_node*> *n1, std::pair<pair_node*,pair_node*> *n2){return n1->second->val->first < n2->second->val->first;};
+    std::function<bool(std::pair<pair_node*,pair_node*>*,std::pair<pair_node*,pair_node*>*)> gtP_ = [](std::pair<pair_node*,pair_node*> *n1, std::pair<pair_node*,pair_node*> *n2){return n1->second->val->first > n2->second->val->first;};
+    std::function<bool(std::pair<pair_node*,pair_node*>*,std::pair<pair_node*,pair_node*>*)> eqP_ = [](std::pair<pair_node*,pair_node*> *n1, std::pair<pair_node*,pair_node*> *n2){return n1->second->val->first == n2->second->val->first;};
+    
+    // contains pairs (pair_node p1, pair_node p2), where p2 is associated with an output interval with at least 4 incoming edges in the permutation graph
+    // p1 is the pair associated with the first input interval in the output interval associated with p2
+    // the pairs are ordered by the starting position of the output interval associated with p2
+    avl_tree<std::pair<pair_node*,pair_node*>> T_e = avl_tree<std::pair<pair_node*,pair_node*>>(ltP_,gtP_,eqP_);
+
+    dl_list<std::pair<int,int>> L_pairs = *new dl_list<std::pair<int,int>>();
     
     private:
-    int build(std::vector<std::pair<int,int>> pairs) {
-        for (auto p : pairs) {
-            T_in.insert(pairP {p.first,p.second});
-            T_out.insert(pairQ {p.first,p.second});
+    void build(std::vector<std::pair<int,int>> pairs) {
+        k = pairs.size()-1;
+        
+        // insert all input pairs as nodes of a doubly linked list into the avl trees T_in and T_out
+        for (int i=0; i<k; i++) { // in O(k)
+            auto *node = L_pairs.pushBack(&(pairs[i]));
+            T_in.insert(node);
+            T_out.insert(node);
         }
-        for (int i=0; i<k; i++) {
-            int p_i = pairs[i].first;
-            int q_i = pairs[i].second;
-            int q_next = q_i+pairs[i+1].first-p_i;
-            if (has4IncEdges(q_i,q_next)) {
-                T_e.insert(pairP {p_i,q_i});
+        L_pairs.pushBack(&(pairs[k]));
+
+        // insert the pairs into T_e, whiches corresponding output intervals have more than 4 incoming edges
+        auto *pairCur = L_pairs.getHead();
+        while (pairCur->succ != NULL) { // in O(k log k)
+            int q_i = pairCur->val->second;
+            int q_next = q_i + pairCur->succ->val->first - pairCur->val->first; // q_next = q_i + d_i = q_i + p_{i+1} - p_i
+            pair_node *first = has4IncEdges(q_i,q_next-1); // in O(log k)
+            if (first != NULL) { 
+                T_e.insert(new std::pair<pair_node*,pair_node*>(first,pairCur));
             }
+            pairCur = pairCur->succ;
         }
 
-        k = T_in.size()-1;
-        D_pair.resize(k);
-        D_index.resize(k);
-        avl_node<pairP>* n = T_in.minimum();
-        for (int i=0; i<k; i++) {
-            D_pair[i] = std::make_pair<int,int> ((int) n->v.p,(int) n->v.q);
-            D_index[i] = 0;
-            n = T_in.next(n);
-        }
+        std::cout << "|T_e| = " << T_e.size() << std::endl;
 
-        print();
+        while(!T_e.isEmpty()) { // in O(k log k)
+            int i = 0;
+            
+            // find output interval to be cut
+            // find smallest pair (p_j, q_j) associated with the output interval [q_j, q_j + d_j - 1]
+            // that has at least 4 incoming edges in the permutation graph
+            auto *min = T_e.removeMin(); // in O(log k)
+            auto *nodePairJ = min->second;
+            int p_j = nodePairJ->val->first;
+            int q_j = nodePairJ->val->second;
+            int d_j = nodePairJ->succ->val->first - p_j;
 
-        while(!T_e.isEmpty()) {
-            avl_node<pairP>* nodeJ = T_e.minimum();
-            avl_node<pairQ>* nodeJ_ = T_out.find(pairQ {nodeJ->v.p,nodeJ->v.q});
-            avl_node<pairP>* nodeX = T_in.minElemNotLessThan(pairP {nodeJ->v.q});
-            int d = T_in.next(nodeX)->v.p-nodeJ->v.q+1;
-            int d_j = T_out.next(nodeJ_)->v.p-nodeJ_->v.p;
+            // find first input interval connected to [q_j, q_j + d_j - 1] in the permutation graph
+            auto *nodePairX = min->first;
+            // the current pair's input interval in nodePairX starts in [q_j, q_j + d_j - 1], but it is possible that
+            // there are input intervals which were created that start between it and q_j
+            // if they exist, they are directly before nodePairX in L_pairs
+            while (nodePairX->pred != NULL && nodePairX->pred->val->first >= p_j) { // in O(1)
+                nodePairX = nodePairX->pred;
+            }
 
-            T_in.insert(pairP {nodeJ->v.p+d,nodeJ->v.q+d});
-            T_out.insert(pairQ {nodeJ->v.p+d,nodeJ->v.q+d});
+            // determine interval cut position
+            // d_1 = p_{x+2} - q_j is the largest integer, so that [q_j,q_j + d_1 - 1] has 2 incoming edges
+            int p_xp2 = nodePairX->succ->succ->val->first;
+            int d_1 = p_xp2 - q_j;
 
-            // (i)
-            T_e.remove(nodeJ->v);
+            // create pair (p_j + d_1, q_j + d_1)
+            auto *pairNew = new std::pair<int,int>(p_j + d_1, q_j + d_1);
+            // link it between (p_j, q_j) and (p_{j+1}, q_{j+1})
+            auto *nodePairNew = L_pairs.insertAfter(nodePairJ,pairNew);
+            // insert it's node in L_pairs into the avl trees
+            T_in.insert(nodePairNew);
+            T_out.insert(nodePairNew);
 
-            // (ii)
-            avl_node<pairQ>* nodeY = T_out.maxElemNotGreaterThan(pairQ {0,nodeJ_->v.p+d});
+            // now the output interval [q_j,q_j + d_j - 1] does not exit anymore
+            // and the output intervals [q_j,q_j + d_1 - 1] and [q_j + d_1, q_j + d_1 + d_2 - 1] were created, with d_2 = d_j - d_1
+            int d_2 = d_j - d_1;
 
-            // (iii)
-            std::vector<std::pair<int,int>> IntervalsToCheck = {
-                std::make_pair<int,int> ((int) nodeJ_->v.q,     (int) nodeJ_->v.q+d-1           ),
-                std::make_pair<int,int> ((int) nodeJ_->v.q+d,   (int) nodeJ_->v.q+d_j-1         ),
-                std::make_pair<int,int> ((int) nodeY->v.q,      (int) T_out.next(nodeY)->v.q-1  )
-            };
-            for(std::pair<int,int> interval : IntervalsToCheck) {
-                if (has4IncEdges(interval.first, interval.second)) {
-                    T_e.insert(pairP {interval.first,interval.second});
+            // now the output interval, p_j + d_1 starts in, possibly has more incoming edges than before
+            // find the output interval [q_y, q_y + d_y - 1] containing p_j + d_1 associated with the pair (p_y, q_y)
+            auto *nodePairY = T_out.maxElemLessOrEqual(new pair_node {new std::pair<int,int>(0, q_j + d_1)})->v; // in O(log k)
+            int p_y = nodePairY->val->first;
+            int q_y = nodePairY->val->second;
+            int d_y = nodePairY->succ->val->first - p_y;
+
+            // find the first input interval [p_z, p_z + d_z - 1], associated with the pair (p_z, q_z), that is connected to
+            // [q_y, q_y + d_y - 1] in the permutation graph
+            auto *nodePairZ = nodePairY;
+            while (nodePairZ->pred != NULL && nodePairZ->pred->val->first >= q_y) {
+                nodePairZ = nodePairZ->pred;
+            }
+
+            // check if [q_y, q_y + d_y - 1] has more than 3 incoming edges
+            // and insert ((p_z, q_z), (p_y, q_y)) into T_e if it does, since it suffices the requirements of pairs in T_e
+            if (has4IncEdges(nodePairZ,q_y + d_y - 1)) { // in O(1)
+                T_e.insert(new std::pair<pair_node*,pair_node*>(nodePairZ,nodePairY)); // in O(log k)
+            }
+
+            // the newly added output interval [q_j + d_1, q_j + d_1 + d_2 - 1] associated with the pair (p_j + d_1, q_j + d_1 + d_2)
+            // possibly has more than 4 incoming edges as well, if [q_j, q_j + d_j - 1] had more than 6 incoming edges in the permutation graph
+            // or if [q_y, q_y + d_y - 1] = [q_j + d_1, q_j + d_1 + d_2 - 1], but then it has already been dealt with
+            if (q_y != q_j + d_1) { // check the second case 
+                auto *nodeXp2 = nodePairX->succ->succ;
+                if (has4IncEdges(nodeXp2,q_j + d_j - 1)) {
+                    T_e.insert(new std::pair<pair_node*,pair_node*>(nodeXp2,nodePairNew)); // in O(log k)
                 }
             }
         }
 
-        k = T_in.size()-1;
+        k = T_in.size();
+        
+        // build D_pair
         D_pair.resize(k);
+        pairCur = L_pairs.getHead();
+        for (int i=0; i<k; i++) { // in O(k)
+            D_pair[i] = *pairCur->val;
+            pairCur = pairCur->succ;
+        }
+
+        // build D_pair
+        pairCur = L_pairs.getHead();
         D_index.resize(k);
-        n = T_in.minimum();
-        for (int i=0; i<k; i++) {
-            D_pair[i] = std::make_pair<int,int> ((int) n->v.p,(int) n->v.q);
-            D_index[i] = 0;
-            n = T_in.next(n);
+        for (int i=0; i<k; i++) { // in O(k log k)
+            // find the input interval [p_j,p_j+d_j-1], q_i is in
+            D_index[i] = inputInterval(pairCur->val->second);
+            pairCur = pairCur->succ;
         }
 
         print();
-
-        return 0;
     }
 
-    bool has4IncEdges(int q_1, int q_2) {
-        avl_node<pairP>* first = T_in.minElemNotLessThan(pairP {q_1});
-        if (first->v.p < q_2) {
-            avl_node<pairP>* fourth = T_in.next(T_in.next(T_in.next(first)));
-            if (fourth != NULL && fourth->v.p < q_2) {
-                return true;
-            }
+    int lenInpInt(pair_node *pair) { // returns the length of the input interval of a given pair
+        return pair->succ->val->first - pair->val->first;
+    }
+
+    int inputInterval(int q_i) { // returns maximum integer i, so that p_i <= q_j, in O(k)
+        return inputInterval(q_i,0,k-1);
+    }
+
+    int inputInterval(int q_i, int l, int r) { // in O(r-l+1)
+        int m = (l+r)/2+1;
+        if (l == r) {
+            return l;
+        } else if (D_pair[m].first > q_i) {
+            return inputInterval(q_i,l,m-1);
+        } else {
+            return inputInterval(q_i,m,r);
         }
-        return false;
+    }
+
+    // checks if the output interval [l,r] has at least 4 incoming edges in the permutation graph
+    // returns the pair associated with the first input interval in [l,r], if it has, else returns NULL
+    pair_node* has4IncEdges(int l, int r) { 
+        if (r-l < 3) { // if |[l,r]| <= 3, there cannot be 4 intervals starting in [l,r]
+            return NULL;
+        }
+        auto *node = T_in.minElemGreaterOrEqual(new pair_node {new std::pair<int,int>((int) l,0)});
+        if (node != NULL && node->v->val->first <= r && has4IncEdges(node->v,r)) {
+            return node->v;
+        }
+        return NULL;
+    }
+
+    // checks if the output interval ending at [l,r] has at least 4 incoming edges in the permutation graph
+    // nodeFirstInpInt must contain the pair associated with the first input interval connected to [l,r]
+    bool has4IncEdges(pair_node *nodeFirstInpInt, int r) {
+        auto *nodeFourthInpInt = L_pairs.ithSucc(nodeFirstInpInt,3);
+        return nodeFourthInpInt != NULL && nodeFourthInpInt->val->first <= r;
     }
 
     public:
@@ -148,7 +201,7 @@ class move_datastructure {
         build(pairs);
     }
 
-    move_datastructure(int n, int k) {
+    move_datastructure(int n, int k) { // generates k random pairs with maximum value n
         if (k <= 0) {
             std::cout << "invalid number of intervals (k <= 0)" << std::endl;
             return;
@@ -194,7 +247,7 @@ class move_datastructure {
         return std::make_pair<int,int> ((int) i_,(int) x_);
     }
 
-    int print() {
+    void print() {
         std::cout << "k = " << k << std::endl;
 
         if (k <= 10) {
@@ -214,8 +267,6 @@ class move_datastructure {
 
             std::cout << std::endl;
         }
-
-        return 0;
     }
 };
 
@@ -230,7 +281,7 @@ int main(int argc, char *argv[]) {
     int k = std::stoi(argv[2]);
     auto md = move_datastructure(n,k);
     */
-
+    
     std::vector<std::pair<int,int>> D_pair = {
         std::make_pair<int,int> (0,9),
         std::make_pair<int,int> (1,10),
@@ -241,12 +292,10 @@ int main(int argc, char *argv[]) {
     };
     auto md = move_datastructure(D_pair);
     
-    /*
     int i = 2;
     int x = 2;
     auto p = md.Move(i,x);
     std::cout << std::endl << "Move(" << i << "," << x << ") = (" << p.first << "," << p.second << ")" << std::endl;
-    */
    
     return 0;
 }

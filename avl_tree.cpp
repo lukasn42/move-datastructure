@@ -1,26 +1,35 @@
+#include <iostream>
 #include <cstdint>
 #include <algorithm>
+#include <functional>
 
 template <typename T>
 struct avl_node {
-    T v; // value
+    T *v; // value
     struct avl_node<T> *p = NULL; // parent
     struct avl_node<T> *lc,*rc = NULL; // left child, right child
-    int h; // height
+    int h = 1; // height
 };
 
 template <typename T>
 class avl_tree {
     private:
+
     avl_node<T> *r; // root
     int h; // height
     int s; // size
+
+    std::function<bool(T*,T*)> lt;
+    std::function<bool(T*,T*)> gt;
+    std::function<bool(T*,T*)> eq;
+    bool leq(T *v1, T *v2) {return lt(v1,v2) || eq(v1,v2);};
+    bool geq(T *v1, T *v2) {return gt(v1,v2) || eq(v1,v2);};
 
     int ht(avl_node<T> *n) { // returns height of subtree of node n
         return n != NULL ? n->h : 0;
     }
 
-    int rotateLeft(avl_node<T> *x) { // left rotation around x, x must have a right child
+    void rotateLeft(avl_node<T> *x) { // left rotation around x, x must have a right child
         avl_node<T> *y = x->rc;
         x->rc = y->lc;
         if (y->lc != NULL) {
@@ -39,10 +48,9 @@ class avl_tree {
         x->p = y;
         updateHeight(x);
         updateHeight(y);
-        return 0;
     }
 
-    int rotateRight(avl_node<T> *y) { // right rotation around y, y must have a left child
+    void rotateRight(avl_node<T> *y) { // right rotation around y, y must have a left child
         avl_node<T> *x = y->lc;
         y->lc = x->rc;
         x->p = y->p;
@@ -58,7 +66,6 @@ class avl_tree {
         y->p = x;
         updateHeight(y);
         updateHeight(x);
-        return 0;
     }
 
     bool balance(avl_node<T> *n) { // balance subtree of node n, returns if it was not balanced
@@ -78,23 +85,23 @@ class avl_tree {
         return false;
     }
 
-    bool insert(T v, avl_node<T> *n) { // inserts value v in the subtree of node n, returns if it could be inserted
+    bool insert(avl_node<T> *n, T *v) { // inserts value v in the subtree of node n, returns if it could be inserted
         bool ret;
-        if (v < n->v) {
-            if (n->lc == NULL) {
-                n->lc = new avl_node<T> {.v = v,.p = n,.h = 1};
+        if (lt(v,n->v)) {
+            if (n->lc != NULL) {
+                ret = insert(n->lc,v);
+            } else {
+                n->lc = new avl_node<T> {.v = v,.p = n};
                 s++;
                 ret = true;
-            } else {
-                ret = insert(v,n->lc);
             }
-        } else if (v > n->v) {
-            if (n->rc == NULL) {
-                n->rc = new avl_node<T> {.v = v,.p = n,.h = 1};
+        } else if (gt(v,n->v)) {
+            if (n->rc != NULL) {
+                ret = insert(n->rc,v);
+            } else {
+                n->rc = new avl_node<T> {.v = v,.p = n};
                 s++;
                 ret = true;
-            } else {
-                ret = insert(v,n->rc);
             }
         } else {
             return false;
@@ -112,14 +119,14 @@ class avl_tree {
         return h != h_;
     }
 
-    bool remove(T v, avl_node<T> *n) { // remove value v in the subtree of node n
+    bool remove(avl_node<T> *n, T *v) { // remove value v in the subtree of node n
         bool ret = true;
-        if (v < n->v) {
-            ret = remove(v,n->lc);
-        } else if (v > n->v) {
-            ret = remove(v,n->rc);
-        } else if (n == NULL) {
+        if (n == NULL) {
             return false;
+        } else if (lt(v,n->v)) {
+            ret = remove(n->lc,v);
+        } else if (gt(v,n->v)) {
+            ret = remove(n->rc,v);
         } else if (n->lc == NULL) {
             s--;
             if (n->rc == NULL) {
@@ -164,7 +171,7 @@ class avl_tree {
         } else {
             avl_node<T> *m = maximum(n->lc);
             n->v = m->v;
-            ret = remove(m->v,n->lc);
+            ret = remove(n->lc,m->v);
         }
         if (n != NULL) {
             updateHeight(n);
@@ -193,80 +200,103 @@ class avl_tree {
         }
     }
 
-    avl_node<T>* find(avl_node<T> *n, T val) {
+    T* removeMin(avl_node<T> *n) { // finds the node with the smallest value in the subtree of node n, removes it and returns it's value
+        T *min;
         if (n == NULL) {
             return NULL;
-        } else if (n->v < val) {
-            return find(n->rc,val);
-        } else if (n->v > val) {
-            return find(n->lc,val);
+        } else if (n->lc == NULL) {
+            min = n->v;
+            remove(n,n->v);
+        } else {
+            min = removeMin(n->lc);
+            if (min != NULL && n != NULL) {
+                updateHeight(n);
+                balance(n);
+            }
+        }
+        return min;
+    }
+
+    T* removeMax(avl_node<T> *n) { // finds the node with the greatest value in the subtree of node n, removes it and returns it's value
+        T *max;
+        if (n == NULL) {
+            return NULL;
+        } else if (n->rc == NULL) {
+            max = n->v;
+            remove(n,n->v);
+        } else {
+            max = removeMax(n->rc);
+            if (max != NULL && n != NULL) {
+                updateHeight(n);
+                balance(n);
+            }
+        }
+        return max;
+    }
+
+    avl_node<T>* find(avl_node<T> *n, T *v) {
+        if (n == NULL) {
+            return NULL;
+        } else if (lt(n->v,v)) {
+            return find(n->rc,v);
+        } else if (gt(n->v,v)) {
+            return find(n->lc,v);
         } else {
             return n;
         }
     }
 
-    avl_node<T>* minElemNotLessThan(avl_node<T> *n, T val) {
+    avl_node<T>* minElemGreaterOrEqual(avl_node<T> *n, T *v) {
         if (n == NULL) {
             return NULL;
-        } else if (n->v < val) {
-            return minElemNotLessThan(n->rc,val);
-        } else if (n->lc != NULL && n->lc->v >= val) {
-            return minElemNotLessThan(n->lc,val);
+        } else if (lt(n->v,v)) {
+            return minElemGreaterOrEqual(n->rc,v);
         } else {
-            return n;
+            avl_node<T>* vLc = minElemGreaterOrEqual(n->lc,v);
+            if (vLc != NULL) {
+                return vLc;
+            } else {
+                return n;
+            }
         }
     }
 
-    avl_node<T>* minElemGreaterThan(avl_node<T> *n, T val) {
+    avl_node<T>* maxElemLessOrEqual(avl_node<T> *n, T *v) {
         if (n == NULL) {
             return NULL;
-        } else if (n->v <= val) {
-            return minElemGreaterThan(n->rc,val);
-        } else if (n->lc != NULL && n->lc->v > val) {
-            return minElemGreaterThan(n->lc,val);
+        } else if (gt(n->v,v)) {
+            return maxElemLessOrEqual(n->lc,v);
         } else {
-            return n;
+            avl_node<T>* vRc = maxElemLessOrEqual(n->rc,v);
+            if (vRc != NULL) {
+                return vRc;
+            } else {
+                return n;
+            }
         }
     }
 
-    avl_node<T>* maxElemLessThan(avl_node<T> *n, T val) {
-        if (n == NULL) {
-            return NULL;
-        } else if (n->v >= val) {
-            return maxElemLessThan(n->lc,val);
-        } else if (n->lc != NULL && n->rc->v < val) {
-            return maxElemLessThan(n->rc,val);
-        } else {
-            return n;
-        }
-    }
-
-    avl_node<T>* maxElemNotGreaterThan(avl_node<T> *n, T val) {
-        if (n == NULL) {
-            return NULL;
-        } else if (n->v > val) {
-            return maxElemNotGreaterThan(n->lc,val);
-        } else if (n->lc != NULL && n->rc->v <= val) {
-            return maxElemNotGreaterThan(n->rc,val);
-        } else {
-            return n;
-        }
-    }
-
-    bool contains(T v, avl_node<T> *n) { // checks if the subtree of node n contains the value v
+    bool contains(avl_node<T> *n, T *v) { // checks if the subtree of node n contains the value v
         if (n == NULL) {
             return false;
-        } else if (v < n->v) {
-            return contains(v,n->lc);
-        } else if (v > n->v) {
-            return contains(v,n->rc);
+        } else if (lt(v,n->v)) {
+            return contains(n->lc,v);
+        } else if (gt(v,n->v)) {
+            return contains(n->rc,v);
         } else {
             return true;
         }
     }
 
     public:
-    avl_tree<T>() { // constructs empty tree
+    avl_tree<T>( // constructs empty tree
+            std::function<bool(T*,T*)> lt,
+            std::function<bool(T*,T*)> gt,
+            std::function<bool(T*,T*)> eq
+    ) { 
+        this->lt = lt;
+        this->gt = gt;
+        this->eq = eq;
         r = NULL;
         h = 0;
         s = 0;
@@ -284,29 +314,37 @@ class avl_tree {
         return s == 0;
     }
 
-    bool contains(T v) { // checks if the tree contains an element with value v
+    bool contains(T *v) { // checks if the tree contains an element with value v
         if (r != NULL) {
-            return contains(v,r);
+            return contains(r,v);
         } else {
             return false;
         }
         
     }
 
-    bool insert(T v) { // inserts value v, returns if it could be inserted
+    bool insert(T *v) { // inserts value v, returns if it could be inserted
         if (r == NULL) {
-            r = new avl_node<T> {.v = v,.h = 1};
+            r = new avl_node<T> {.v = v};
             h = 1;
             s++;
             return true;
         } else {
-            return insert(v,r);
+            bool ret = insert(r,v);
+            h = r->h;
+            return ret;
         }
     }
 
-    bool remove(T v) { // removes value v, returns if it could be removed
+    bool remove(T *v) { // removes value v, returns if it could be removed
         if (r != NULL) {
-            return remove(v,r);
+            bool ret = remove(r,v);
+            if (r != NULL) {
+                h = r->h;
+            } else {
+                h = 0;
+            }
+            return ret;
         }
         return false;
     }
@@ -325,70 +363,76 @@ class avl_tree {
         return NULL;
     }
 
-    avl_node<T>* find(T val) {
-        if (r == NULL) {
-            return NULL;
-        }
-        return find(r,val);
-    }
-
-    avl_node<T>* minElemGreaterThan(T val) {
-        if (r == NULL) {
-            return NULL;
-        }
-        return minElemGreaterThan(r,val);
-    }
-
-    avl_node<T>* minElemNotLessThan(T val) {
-        if (r == NULL) {
-            return NULL;
-        }
-        return minElemNotLessThan(r,val);
-    }
-
-    avl_node<T>* maxElemLessThan(T val) {
-        if (r == NULL) {
-            return NULL;
-        }
-        return maxElemLessThan(r,val);
-    }
-
-    avl_node<T>* maxElemNotGreaterThan(T val) {
-        if (r == NULL) {
-            return NULL;
-        }
-        return maxElemNotGreaterThan(r,val);
-    }
-
-    avl_node<T>* next(avl_node<T> *n) {
-        if (n != NULL) {
-            if (n->rc != NULL) {
-                return minimum(n->rc);
-            } else {
-                while (n->p != NULL && n == n->p->rc) {
-                    n = n->p;
-                }
-                if (n->p != NULL) {
-                    return n->p;
-                }
-            }
+    T* removeMin() { // finds the node with the smallest value in the avl tree, removes it and returns it's value
+        if (r != NULL) {
+            return removeMin(r);
         }
         return NULL;
     }
 
-    avl_node<T>* prev(avl_node<T> *n) {
-        if (n != NULL) {
-            if (n->lc != NULL) {
-                return maximum(n->lc);
-            } else {
-                while (n->p != NULL && n == n->p->lc) {
-                    n = n->p;
-                }
-                if (n->p != NULL) {
-                    return n->p;
-                }
-            }
+    avl_node<T>* find(T *v) {
+        if (r == NULL) {
+            return NULL;
         }
-        return NULL;
+        return find(r,v);
+    }
+
+    avl_node<T>* minElemGreaterThan(T *v) {
+        if (r == NULL) {
+            return NULL;
+        }
+        return minElemGreaterThan(r,v);
+    }
+
+    avl_node<T>* minElemGreaterOrEqual(T *v) {
+        if (r == NULL) {
+            return NULL;
+        }
+        return minElemGreaterOrEqual(r,v);
+    }
+
+    avl_node<T>* maxElemLessThan(T *v) {
+        if (r == NULL) {
+            return NULL;
+        }
+        return maxElemLessThan(r,v);
+    }
+
+    avl_node<T>* maxElemLessOrEqual(T *v) {
+        if (r == NULL) {
+            return NULL;
+        }
+        return maxElemLessOrEqual(r,v);
+    }
+
+    /*
+    void print() {
+        if (r != NULL) {
+            print(r);
+        }
+        std::cout << std::endl;
+    }
+
+    void print(avl_node<T> *n) {
+        if (n != NULL) {
+            std::cout << "(";
+            print(n->lc);
+            std::cout << "|" << *n->v << "|";
+            print(n->rc);
+            std::cout << ")";
+        }
+    }
+    */
+};
+
+/*
+int main(int argc, char *argv[]) {
+    auto t = avl_tree<int>([](auto v1, auto v2){return *v1 < *v2;},[](auto v1, auto v2){return *v1 > *v2;},[](auto v1, auto v2){return *v1 == *v2;});
+    for(int i=0; i<1000; i++) {
+        t.insert(new int(i));
+    }
+    for(int i=0; i<1000; i++) {
+        std::cout << *t.removeMin() << std::endl;
     }
 };
+*/
