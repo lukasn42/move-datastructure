@@ -5,69 +5,69 @@
 
 template <typename T>
 struct dll_node {
-    T *val; // value
-    dll_node<T> *pred,*succ = NULL; // predeccesor and successor
+    T *v; // value
+    dll_node<T> *pr,*sc = NULL; // predeccesor and successor
 };
 
 template <typename T>
 class dl_list {
     private:
-    dll_node<T> *head,*tail; // first and last node
-    int size; // size
+    dll_node<T> *hd,*tl; // first and last node
+    int s; // s
 
     public:
     dl_list() {
-        head = NULL;
-        tail = NULL;
-        size = 0;
+        hd = NULL;
+        tl = NULL;
+        s = 0;
     }
 
-    dll_node<T>* pushBack(T *val) { // pushes value to the back of the list, returns the new node
-        dll_node<T> *newNode;
+    dll_node<T>* pushBack(T *v) { // pushes v to the back of the list, returns the new node
+        dll_node<T> *newN;
         if (!isEmpty()) {
-            newNode = insertAfter(tail,val);
-            size++;
+            newN = insertAfter(tl,v);
         } else {
-            newNode = new dll_node<T> {val};
-            head = newNode;
-            size = 1;
+            newN = new dll_node<T> {v};
+            hd = newN;
+            s = 1;
         }
-        tail = newNode;
-        return newNode;
+        tl = newN;
+        return newN;
     }
 
-    dll_node<T>* insertAfter(dll_node<T> *node, T *val) { // inserts value after a node in the list, returns the new node
-        dll_node<T> *newNode = new dll_node<T> {.val = val,.pred = node,.succ = node->succ};
-        if (node->succ != NULL) {
-            node->succ->pred = newNode;
+    dll_node<T>* insertAfter(dll_node<T> *n, T *v) { // inserts v after a node in the list, returns the new node
+        dll_node<T> *newN = new dll_node<T> {.v = v,.pr = n,.sc = n->sc};
+        if (n->sc != NULL) {
+            n->sc->pr = newN;
         }
-        node->succ = newNode;
-        return newNode;
+        n->sc = newN;
+        s++;
+        return newN;
     }
 
-    dll_node<T>* ithSucc(dll_node<T> *node, int i) { // returns the i-th successor of node
+    dll_node<T>* ithSucc(dll_node<T> *n, int i) { // returns the i-th successor of node
         if (i == 0) {
-            return node;
-        } else if (i > 0 && node->succ != NULL) {
-            return ithSucc(node->succ,i-1);
+            return n;
+        } else if (i > 0 && n->sc != NULL) {
+            return ithSucc(n->sc,i-1);
         } else {
             return NULL;
         }
     }
 
-    dll_node<T>* getHead() { // returns the head of the list
-        return head;
+    dll_node<T>* head() { // returns the hd of the list
+        return hd;
     }
 
-    dll_node<T>* getTail() { // returns the tail of the list
-        return tail;
+    dll_node<T>* tail() { // returns the tl of the list
+        return tl;
     }
 
     bool isEmpty() { // returns if the list is empty
-        return getSize() == 0;
+        return s == 0;
     }
 
-    int getSize() { // returns the number of elements in the list
-        return size;
+    int size() { // returns the number of elements in the list
+        return s;
     }
 };
