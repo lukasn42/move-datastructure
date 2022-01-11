@@ -1,91 +1,138 @@
-#include <iostream>
-#include <cstdint>
-#include <algorithm>
-#include <functional>
-
 #include "dl_list.h"
 
 template <typename T>
-dll_node<T>::dll_node(T *v) { // creates a node with value v
-    this->v = v;
-}
-
-template <typename T>
-dll_node<T>::~dll_node() { // deletes the node
+dll_node<T>::~dll_node() {
     pr = sc = NULL;
 }
 
 template <typename T>
-dl_list<T>::dl_list() { // creates an empty list
-    hd = NULL;
-    tl = NULL;
+dl_list<T>::dl_list() {
+    hd = tl = NULL;
     s = 0;
 }
 
 template <typename T>
-dl_list<T>::~dl_list() { // deletes all nodes of the list and the lsit
-    dll_node<T> *n = hd;
-    for (int i=0; i<s-1; i++) {
-        n = n->sc;
-        delete n->pr;
+dl_list<T>::~dl_list() {
+    if (!empty()) {
+        auto *n = hd;
+        for (int i=1; i<s; i++) {
+            n = n->sc;
+            delete n->pr;
+        }
+        hd = tl = NULL;
+        s = 0;
     }
-    delete n;        
 }
 
 template <typename T>
-int dl_list<T>::size() { // returns the number of nodes in the list
-    return s;
-}
-
-template <typename T>
-bool dl_list<T>::isEmpty() { // returns if the list is empty
+bool dl_list<T>::empty() {
     return s == 0;
 }
 
 template <typename T>
-dll_node<T>* dl_list<T>::pushBack(T *v) { // creates a node with value v and pushes it to the back of the list, returns the new node
-    dll_node<T> *newN;
-    if (!isEmpty()) {
-        newN = insertAfter(tl,v);
-    } else {
-        newN = new dll_node<T>(v);
-        hd = newN;
-        s = 1;
-    }
-    tl = newN;
-    return newN;
+uint64_t dl_list<T>::size() {
+    return s;
 }
 
 template <typename T>
-dll_node<T>* dl_list<T>::insertAfter(dll_node<T> *n, T *v) { // creates a node with value v and inserts it after node n in the list, returns the new node
-    dll_node<T> *newN = new dll_node<T>(v);
-    newN->pr = n;
-    newN->sc = n->sc;
-    if (n->sc != NULL) {
-        n->sc->pr = newN;
-    }
-    n->sc = newN;
-    s++;
-    return newN;
-}
-
-template <typename T>
-dll_node<T>* dl_list<T>::iterateSuccessor(dll_node<T> *n, int i) { // returns the i-th successor of node n if it exists, else returns NULL
-    if (i == 0) {
-        return n;
-    } else if (i > 0 && n->sc != NULL) {
-        return iterateSuccessor(n->sc,i-1);
-    } else {
-        return NULL;
-    }
-}
-
-template <typename T>
-dll_node<T>* dl_list<T>::head() { // returns the head of the list
+dll_node<T>* dl_list<T>::head() {
     return hd;
 }
 
 template <typename T>
-dll_node<T>* dl_list<T>::tail() { // returns the tail of the list
+dll_node<T>* dl_list<T>::tail() {
     return tl;
+}
+
+template <typename T>
+void dl_list<T>::insert_node_after(dll_node<T> *n1, dll_node<T> *n2) {
+    n2->pr = n1;
+    n2->sc = n1->sc;
+    if (n1->sc != NULL) {
+        n1->sc->pr = n2;
+    }
+    n1->sc = n2;
+    s++;
+}
+
+template <typename T>
+void dl_list<T>::push_back_node(dll_node<T> *n) {
+    if (empty()) {
+        hd = n;
+        s = 1;
+    } else {
+        insert_node_after(tl,n);
+    }
+    tl = n;
+}
+
+template <typename T>
+void dl_list<T>::remove_node(dll_node<T> *n) {
+    s--;
+    if (n == hd) {
+        hd = n->sc;
+    } else if (n == tl) {
+        tl = n->pr;
+    }
+    if (n->pr != NULL) {
+        n->pr->sc = n->sc;
+    }
+    if (n->sc != NULL) {
+        n->sc->pr = n->pr;
+    }
+}
+
+template <typename T>
+void dl_list<T>::disconnect_from_nodes() {
+    hd = tl = NULL;
+    s = 0;
+}
+
+template <typename T>
+dl_list<T>::dll_it::dll_it(dl_list<T> *l, dll_node<T> *n) {
+    this->l = l;
+    this->cur = n;
+}
+
+template <typename T>
+dl_list<T>::dll_it::~dll_it() {
+    l = NULL;
+    cur = NULL;
+};
+
+template <typename T>
+bool dl_list<T>::dll_it::has_next() {
+    return cur->sc != NULL;
+}
+
+template <typename T>
+bool dl_list<T>::dll_it::has_prev() {
+    return cur->pr != NULL;
+}
+
+template <typename T>
+dll_node<T>* dl_list<T>::dll_it::current() {
+    return cur;
+}
+
+template <typename T>
+dll_node<T>* dl_list<T>::dll_it::next() {
+    cur = cur->sc;
+    return cur;
+}
+
+template <typename T>
+dll_node<T>* dl_list<T>::dll_it::previous() {
+    cur = cur->pr;
+    return cur;
+}
+
+template <typename T>
+void dl_list<T>::dll_it::set(dll_node<T> *n) {
+    cur = n;
+}
+
+template <typename T>
+typename dl_list<T>::dll_it dl_list<T>::iterator(dll_node<T> *n) {
+    return dl_list<T>::dll_it(this,n);
 }
