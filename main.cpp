@@ -15,9 +15,6 @@
 extern "C" {
     #include "build/_deps/libsais-src/src/libsais.h"
     #include "build/_deps/libsais-src/src/libsais.c"
-
-    #include "build/_deps/malloc_count-src/malloc_count.h"
-    #include "build/_deps/malloc_count-src/malloc_count.c"
 }
 
 #include "build/_deps/malloc_count-src/memprofile.h"

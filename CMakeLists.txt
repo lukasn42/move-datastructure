@@ -33,6 +33,7 @@ set(Sources
   avl_tree.cpp
 )
 add_library(${This} STATIC ${Sources} ${Headers})
+target_link_libraries(${This} dl)
 
 # googletest
 FetchContent_Declare(

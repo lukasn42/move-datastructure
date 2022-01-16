@@ -14,19 +14,26 @@ dl_list<T>::dl_list() {
 template <typename T>
 dl_list<T>::~dl_list() {
     if (!empty()) {
-        auto *n = hd;
-        for (int i=1; i<s; i++) {
-            n = n->sc;
-            delete n->pr;
-        }
-        hd = tl = NULL;
-        s = 0;
+        remove_all_nodes();
     }
 }
 
 template <typename T>
 bool dl_list<T>::empty() {
     return s == 0;
+}
+
+template <typename T>
+void dl_list<T>::remove_all_nodes() {
+    if (!empty()) {
+        auto *n = hd;
+        for (uint64_t i=1; i<s; i++) {
+            n = n->sc;
+            delete n->pr;
+        }
+        hd = tl = NULL;
+        s = 0;
+    }
 }
 
 template <typename T>
@@ -83,7 +90,7 @@ void dl_list<T>::remove_node(dll_node<T> *n) {
 }
 
 template <typename T>
-void dl_list<T>::disconnect_from_nodes() {
+void dl_list<T>::disconnect_nodes() {
     hd = tl = NULL;
     s = 0;
 }

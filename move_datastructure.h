@@ -23,26 +23,20 @@ template <typename T> using pair_list = dl_list<interv_pair<T>>;
 template <typename T> using pair_tree_node = avl_node<pair_list_node<T>>;
 template <typename T> using pair_tree = avl_tree<pair_list_node<T>>;
 
+/**
+ * @brief stores a bijective function f_I : [0..n-1] -> [0..n-1] as a balanced interval sequence B_I[0..k+] (in the array D_pair)
+ *        supports calculation of f_I(i) = i' by calculating Move(i,x) = (i',x') in O(a), x can be calculated with x = find_interval(i) in O(log k)
+ * @tparam T (unsigned integer) type of the interval starting positions
+ */
 template <typename T>
 class move_datastructure {
     protected:
-    /* maximum value, n = p_{k-1} + d_{k-1}, k <= n */
-    T n;
-
-    /* number of intervals, 0 < k */
-    T k;
-
-    /* minimum number of incoming edges in the permutation graph, an output interval must have, to get cut, 4 <= a (default = 4) */
-    uint8_t a;
-
-    /* number of remaining incoming edges after an output interval gets cut, 2 <= b < a-1 (default = 2) */
-    uint8_t b;
-
-    /* balanced inteval sequence B_I */
-    interv_seq<T> D_pair;
-
-    /* D_index[j] = i <=> q_j in [p_i, p_i + d_i - 1], with i,j in [0..k-1] */
-    std::vector<T> D_index;
+    T n; // maximum value, n = p_{k-1} + d_{k-1}, k <= n
+    T k; // number of intervals, 0 < k
+    uint8_t a; // minimum number of incoming edges in the permutation graph, an output interval must have, to get cut, 4 <= a (default = 4)
+    uint8_t b; // number of remaining incoming edges after an output interval gets cut, 2 <= b < a-1 (default = 2)
+    interv_seq<T> D_pair; // stores the balanced inteval sequence B_I = ((p_0,q_0),(p_1,q_1),..,(p_{k-1},q_{k-1}))
+    std::vector<T> D_index; // D_index[j] = i <=> q_j in [p_i, p_i + d_i - 1], with i,j in [0..k-1]
 
     /**
      * @brief returns the length of an interval
@@ -58,12 +52,12 @@ class move_datastructure {
      * @param nodePairI pointer to the node in L_in, storing (p_i,q_i), [p_i, p_i + d_i - 1] must be the first input interval connected to [q_j, q_j + d_j - 1] in the permutation graph
      * @param nodePairJ pointer to the node in L_in, storing (p_j,q_j), [q_j, q_j + d_j - 1] must be the first unbalanced output interval
      * @return true if [q_j, q_j + d_j - 1] is unbalanced (has >= a incoming edges in the permutation graph)
-     * @return false if [q_j, q_j + d_j - 1] is balanced(has < a incoming edges in the permutation graph)
+     * @return false if [q_j, q_j + d_j - 1] is balanced (has < a incoming edges in the permutation graph)
      */
     inline bool is_unbalanced(pair_list_node<T>* nodePairI, pair_list_node<T>* nodePairJ);
 
     /**
-     * @brief balances an output interval and all unbalanced output intervals starting before or at q_u, that have got unbalanced in the process
+     * @brief balances the output interval [q_j, q_j + d_j - 1] and all unbalanced output intervals starting before or at q_u that have become unbalanced in the process
      * 
      * @param L_in pointer to L_in
      * @param T_out pointer to T_out
@@ -85,7 +79,7 @@ class move_datastructure {
     move_datastructure(interv_seq<T> *I, T n, uint8_t a = 4, uint8_t b = 2);
 
     /**
-     * @brief returns the number of intervals in D_pair
+     * @brief returns k
      * 
      * @return T k
      */

@@ -104,28 +104,6 @@ void avl_tree<T>::balance_from_to(avl_node<T> *nf, avl_node<T> *nt) {
 }
 
 template <typename T>
-avl_node<T>* avl_tree<T>::find(avl_node<T> *n, T *v) {
-    do {
-        if (gt(v,&n->v)) {
-            if (n->rc != NULL) {
-                n = n->rc;
-            } else {
-                return NULL;
-            }
-        } else if (lt(v,&n->v)) {
-            if (n->lc != NULL) {
-                n = n->lc;
-            } else {
-                return NULL;
-            }
-        } else {
-            break;
-        }
-    } while (true);
-    return n;
-}
-
-template <typename T>
 avl_node<T>* avl_tree<T>::minimum(avl_node<T> *n) {
     while (n->lc != NULL) {
         n = n->lc;
@@ -142,7 +120,7 @@ avl_node<T>* avl_tree<T>::maximum(avl_node<T> *n) {
 }
 
 template <typename T>
-void avl_tree<T>::remove_node(avl_node<T> *n, avl_node<T> *nr) {
+void avl_tree<T>::remove_node_in(avl_node<T> *n, avl_node<T> *nr) {
     auto *nr_p = nr->p;
     if (nr->lc == NULL) {
         s--;
@@ -168,9 +146,8 @@ void avl_tree<T>::remove_node(avl_node<T> *n, avl_node<T> *nr) {
                 nr->rc->p = NULL;
                 r = nr->rc;
             }
+            nr->rc = NULL;
         }
-        nr->rc = NULL;
-        nr->lc = NULL;
         delete nr;
     } else if (nr->rc == NULL) {
         s--;
@@ -185,13 +162,40 @@ void avl_tree<T>::remove_node(avl_node<T> *n, avl_node<T> *nr) {
             nr->lc->p = NULL;
             r = nr->lc;
         }
-        nr->rc = NULL;
         nr->lc = NULL;
         delete nr;
     } else {
         auto *min = minimum(nr->rc);
-        nr->v = min->v;
-        remove_node(nr->rc,min);
+        auto tmp = *min;
+
+        min->p = nr->p;
+        if (nr->p != NULL) {
+            if (nr == nr->p->lc) {
+                nr->p->lc = min;
+            } else {
+                nr->p->rc = min;
+            }
+        }
+        min->lc = nr->lc;
+        nr->lc->p = min;
+        min->h = nr->h;
+        if (min->rc != NULL) {
+            min->rc->p = nr;
+        }
+        if (min == nr->rc) {
+            min->rc = nr;
+            nr->p = min;
+        } else {
+            min->rc = nr->rc;
+            nr->rc->p = min;
+            nr->p = tmp.p;
+            tmp.p->lc = nr;
+        }
+        nr->rc = tmp.rc;
+        nr->lc = NULL;
+        nr->h = tmp.h;
+
+        remove_node_in(min->rc,nr);
     }
     if (nr_p != NULL) {
         balance_from_to(nr_p,n);
@@ -213,6 +217,28 @@ avl_tree<T>::avl_tree(
 
 template <typename T>
 avl_tree<T>::~avl_tree() {
+    if (!empty()) {
+        remove_all_nodes();
+    }
+}
+
+template <typename T>
+uint8_t avl_tree<T>::height() {
+    return h;
+}
+
+template <typename T>
+uint64_t avl_tree<T>::size() {
+    return s;
+}
+
+template <typename T>
+bool avl_tree<T>::empty() {
+    return s == 0;
+}
+
+template <typename T>
+void avl_tree<T>::remove_all_nodes() {
     if (!empty()) {
         auto n = fst;
         do {
@@ -241,23 +267,27 @@ avl_tree<T>::~avl_tree() {
 }
 
 template <typename T>
-uint8_t avl_tree<T>::height() {
-    return h;
-}
-
-template <typename T>
-uint64_t avl_tree<T>::size() {
-    return s;
-}
-
-template <typename T>
-bool avl_tree<T>::empty() {
-    return s == 0;
-}
-
-template <typename T>
-avl_node<T>* avl_tree<T>::find(T *v){
-    return find(r,v);
+avl_node<T>* avl_tree<T>::find(T *v) {
+    if (empty()) return NULL;
+    auto *n = r;
+    do {
+        if (gt(v,&n->v)) {
+            if (n->rc != NULL) {
+                n = n->rc;
+            } else {
+                break;
+            }
+        } else if (lt(v,&n->v)) {
+            if (n->lc != NULL) {
+                n = n->lc;
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
+    } while (true);
+    return n;
 }
 
 template <typename T>
@@ -271,46 +301,36 @@ avl_node<T>* avl_tree<T>::maximum() {
 }
 
 template <typename T>
-avl_node<T>* avl_tree<T>::insert(T *v) {
+avl_node<T>* avl_tree<T>::insert_or_update(T *v) {
     if (empty()) {
         r = new avl_node<T>{*v,NULL,NULL,NULL,1};
         h = s = 1;
         fst = lst = r;
         return r;
     } else {
-        auto *n = r;
-        do {
-            if (gt(v,&n->v)) {
-                if (n->rc != NULL) {
-                    n = n->rc;
-                } else {
-                    n->rc = new avl_node<T>{*v,n,NULL,NULL,1};
-                    n = n->rc;
-                    break;
-                }
-            } else if (lt(v,&n->v)) {
-                if (n->lc != NULL) {
-                    n = n->lc;
-                } else {
-                    n->lc = new avl_node<T>{*v,n,NULL,NULL,1};
-                    n = n->lc;
-                    break;
-                }
+        auto *na = find(v);
+        if (eq(&na->v,v)) {
+            na->v = *v;
+            return na;
+        } else {
+            auto *n = new avl_node<T>{*v,NULL,NULL,NULL,1};
+            if (lt(&n->v,&na->v)) {
+                na->lc = n;
+                n->p = na;
             } else {
-                return NULL;
+                na->rc = n;
+                n->p = na;
             }
-        } while (true);
-        if (n->p != NULL) {
             balance_from_to(n->p,r);
+            h = r->h;
+            s++;
+            if (lt(v,&fst->v)) {
+                fst = n;
+            } else if (gt(v,&lst->v)) {
+                lst = n;
+            }
+            return n;
         }
-        h = r->h;
-        s++;
-        if (lt(v,&fst->v)) {
-            fst = n;
-        } else if (gt(v,&lst->v)) {
-            lst = n;
-        }
-        return n;
     }
 }
 
@@ -334,16 +354,15 @@ void avl_tree<T>::remove_node(avl_node<T> *n) {
                 lst = n->p;
             }
         }
-        remove_node(r,n);
+        remove_node_in(r,n);
         h = r->h;
     }
 }
 
 template <typename T>
 bool avl_tree<T>::remove(T *v) {
-    if (empty()) return false;
     auto *n = find(v);
-    if (n == NULL) return false;
+    if (n == NULL || !eq(&n->v,v)) return false;
     remove_node(n);
     return true;
 }
