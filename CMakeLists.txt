@@ -1,48 +1,29 @@
 cmake_minimum_required(VERSION "3.16.3")
+set(CMAKE_CXX_STANDARD 20)
 
-set(This move_datastructure)
-project(${This} CXX)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-enable_testing()
-include(FetchContent)
+project(mds CXX)
 
-#malloc_count
-FetchContent_Declare(
-  malloc_count
-  URL https://github.com/bingmann/malloc_count/archive/refs/heads/master.zip
-)
-FetchContent_MakeAvailable(malloc_count)
+# openmp
+find_package(OpenMP)
 
-#libsais
-FetchContent_Declare(
-  libsais
-  URL https://github.com/IlyaGrebnov/libsais/archive/refs/heads/master.zip
-)
-FetchContent_MakeAvailable(libsais)
+# ips4o
+add_subdirectory(extern/ips4o)
 
-set(Headers
-  move_datastructure.h
-  dl_list.h
-  avl_tree.h
-)
-set(Sources
-  main.cpp
-  move_datastructure.cpp
-  dl_list.cpp
-  avl_tree.cpp
-)
-add_library(${This} STATIC ${Sources} ${Headers})
-target_link_libraries(${This} dl)
+# malloc_count
+include_directories(extern/malloc_count)
 
-# googletest
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/refs/heads/main.zip
-)
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
-add_subdirectory(tests)
+# libsais
+include_directories(extern/libsais/src)
 
-add_executable(main main.cpp)
-target_link_libraries(main dl)
+# move datastructure
+add_library(mds STATIC src/mds.cpp include/mds.hpp)
+target_link_libraries(mds dl ips4o OpenMP::OpenMP_CXX)
+
+# move datastructure test
+add_executable(mds_test test/test.cpp)
+target_link_libraries(mds_test mds dl ips4o OpenMP::OpenMP_CXX)
+target_compile_options(mds_test PUBLIC -O3 -DNDEBUG -funroll-loops -finline-functions -march=native)
+
+add_executable(mds_test_debug test/test.cpp)
+target_link_libraries(mds_test_debug mds dl ips4o OpenMP::OpenMP_CXX)
+target_compile_options(mds_test_debug PUBLIC -ggdb3 -Wall -Wextra -march=native)
