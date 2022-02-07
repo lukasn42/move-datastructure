@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
         time = log_runtime(time,"I_SA sorted");
         
         // build F_I_SA from I_SA
-        mds<uint32_t> F_I_SA(I_SA,n,a,b,p,v);
+        mds<uint32_t> F_I_SA(I_SA,n,a,b,p,v,true);
         I_SA = NULL;
         time = log_runtime(time,"F_I_SA calculated");
         std::cout << "k+t = " << F_I_SA.intervals() << ", (k+t)/k ~ " << std::ceil(F_I_SA.intervals()/(double) r * 1000.0)/1000.0 << std::endl;
@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
     time = log_runtime(time,"I_LF calculated");
 
     // build F_I_LF from I_LF
-    mds<uint32_t> F_I_LF(I_LF,n,a,b,p,v);
+    mds<uint32_t> F_I_LF(I_LF,n,a,b,p,v,true);
     I_LF = NULL;
     time = log_runtime(time,"F_I_LF calculated");
     std::cout << "k+t = " << F_I_LF.intervals() << ", (k+t)/k ~ " << std::ceil(F_I_LF.intervals()/(double) r * 1000.0)/1000.0 << std::endl;

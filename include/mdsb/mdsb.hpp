@@ -48,8 +48,9 @@ class mdsb {
      * @param b number of remaining incoming edges after an output interval is cut, 2 <= b < a-1
      * @param p number of threads to use
      * @param v version of the build method (1/2/3)
+     * @param log enables log messages during build process
      */
-    mdsb<T>(mds<T> *mds, interv_seq<T> *I, T n, T a, T b, int p, int v);
+    mdsb<T>(mds<T> *mds, interv_seq<T> *I, T n, T a, T b, int p, int v, bool log);
 
     /**
      * @brief deletes the mdsb
@@ -72,7 +73,7 @@ class mdsb {
      * @brief builds the move datastructure md
      * @param I interval sequence
      */
-    void build_v1(interv_seq<T> *I);
+    void build_v1(interv_seq<T> *I, bool log);
 
     // ############################# V2/V3 #############################
 
@@ -97,7 +98,7 @@ class mdsb {
      * @param I interval sequence
      * @param v version
      */
-    void build_v2_v3(interv_seq<T> *I, int v);
+    void build_v2_v3(interv_seq<T> *I, int v, bool log);
 
     // ############################# V2/V3 SEQUENTIAL/PARALLEL #############################
 

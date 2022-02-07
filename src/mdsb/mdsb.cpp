@@ -23,7 +23,7 @@ extern "C" {
 #include "mdsb_v3_seq.cpp"
 
 template <typename T>
-mdsb<T>::mdsb(mds<T> *md, interv_seq<T> *I, T n, T a, T b, int p, int v) {
+mdsb<T>::mdsb(mds<T> *md, interv_seq<T> *I, T n, T a, T b, int p, int v, bool log) {
     this->md = md;
     this->n = n;
     this->k = I->size();
@@ -34,9 +34,9 @@ mdsb<T>::mdsb(mds<T> *md, interv_seq<T> *I, T n, T a, T b, int p, int v) {
     omp_set_num_threads(p);
 
     if (v == 1) {
-        build_v1(I);
+        build_v1(I,log);
     } else {
-        build_v2_v3(I,v);
+        build_v2_v3(I,v,log);
     }
 }
 
@@ -46,18 +46,25 @@ mdsb<T>::~mdsb() {
 }
 
 template <typename T>
-void mdsb<T>::build_v2_v3(interv_seq<T> *I, int v) {
-    size_t baseline = malloc_count_current() - sizeof(I->at(0))*I->size();
-    std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now();
-    malloc_count_reset_peak();
-    std::cout << std::endl;
+void mdsb<T>::build_v2_v3(interv_seq<T> *I, int v, bool log) {
+    size_t baseline;
+    std::chrono::steady_clock::time_point time;
 
-    log_memory_usage<T>(baseline,"building L_in and T_out");
+    if (log) {
+        baseline = malloc_count_current() - sizeof(I->at(0))*I->size();
+        time = std::chrono::steady_clock::now();
+        malloc_count_reset_peak();
+        std::cout << std::endl;
+    }
+
+    if (log) log_memory_usage<T>(baseline,"building L_in and T_out");
 
     build_lin_tout(I);
     
-    time = log_runtime<T>(time);
-    log_memory_usage<T>(baseline,"balancing");
+    if (log) {
+        time = log_runtime<T>(time);
+        log_memory_usage<T>(baseline,"balancing");
+    }
 
     if (p > 1) {
         if (v == 2) {
@@ -73,24 +80,31 @@ void mdsb<T>::build_v2_v3(interv_seq<T> *I, int v) {
         }
     }
 
-    time = log_runtime<T>(time);
-    log_memory_usage<T>(baseline,"building D_pair");
+    if (log) {
+        time = log_runtime<T>(time);
+        log_memory_usage<T>(baseline,"building D_pair");
+    }
     
     build_dpair();
 
-    time = log_runtime<T>(time);
-    log_memory_usage<T>(baseline,"deleteing L_in and T_out");
+    if (log) {
+        time = log_runtime<T>(time);
+        log_memory_usage<T>(baseline,"deleteing L_in and T_out");
+    }
 
     delete_lin_tout();
 
-    time = log_runtime<T>(time);
-    log_memory_usage<T>(baseline,"building D_index");
+    if (log) {
+        time = log_runtime<T>(time);
+        log_memory_usage<T>(baseline,"building D_index");
+    }
 
     build_dindex();
 
-    time = log_runtime<T>(time);
-    log_memory_usage<T>(baseline,"move datastructure built");
+    if (log) {
+        time = log_runtime<T>(time);
+        log_memory_usage<T>(baseline,"move datastructure built");
+    }
 
-    std::cout << std::endl << "peak memory allocation during build: ~ " << (malloc_count_peak()-baseline)/1000000 << "MB" << std::endl;
-    std::cout << std::endl;
+    if (log) std::cout << std::endl << "peak memory allocation during build: ~ " << (malloc_count_peak()-baseline)/1000000 << "MB" << std::endl << std::endl;
 }

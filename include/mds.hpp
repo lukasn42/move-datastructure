@@ -31,13 +31,27 @@ class mds {
      * @param p (optional) number of threads to use (default: all threads)
      * @param p number of threads to use (default: all threads)
      * @param v version of the build method (1/2/3) (default: 3)
+     * @param log enables log messages during build process (default: false)
      */
-    mds<T>(std::vector<std::pair<T,T>> *I, T n, T a = 4, T b = 2, int p = omp_get_max_threads(), int v = 3);
+    mds<T>(std::vector<std::pair<T,T>> *I, T n, T a = 4, T b = 2, int p = omp_get_max_threads(), int v = 3, bool log = false);
+
+    /**
+     * @brief creates a move datastructure from an input stream
+     * @param in input stream
+     */
+    mds<T>(std::istream &in);
 
     /**
      * @brief deletes the move datastructure
      */
     ~mds<T>();
+
+    /**
+     * @brief writes the move_datastructure to the output stream out
+     * @param out output stream
+     * @return size of the data written to out
+     */
+    uint64_t serialize(std::ostream &out);
 
     /**
      * @brief returns the number of intervals

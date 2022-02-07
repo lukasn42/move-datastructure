@@ -3,13 +3,18 @@
 #include "../../include/mdsb/mdsb.hpp"
 
 template <typename T>
-void mdsb<T>::build_v1(interv_seq<T> *I) {
-    size_t baseline = malloc_count_current() - sizeof(I->at(0))*I->size();
-    std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now();
-    malloc_count_reset_peak();
-    std::cout << std::endl;
+void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
+    size_t baseline;
+    std::chrono::steady_clock::time_point time;
 
-    log_memory_usage<T>(baseline,"building T_in and T_out");
+    if (log) {
+        baseline = malloc_count_current() - sizeof(I->at(0))*I->size();
+        time = std::chrono::steady_clock::now();
+        malloc_count_reset_peak();
+        std::cout << std::endl;
+    }
+
+    if (log) log_memory_usage<T>(baseline,"building T_in and T_out");
 
     // stores the pairs in I sorted by p_i
     avl_tree<std::pair<T,T>> T_in(
@@ -40,8 +45,10 @@ void mdsb<T>::build_v1(interv_seq<T> *I) {
         T_out.insert_or_update(p);
     }
 
-    time = log_runtime<T>(time);
-    log_memory_usage<T>(baseline,"building T_e");
+    if (log) {
+        time = log_runtime<T>(time);
+        log_memory_usage<T>(baseline,"building T_e");
+    }
 
     // build T_e
     T q_i,q_next;
@@ -69,8 +76,10 @@ void mdsb<T>::build_v1(interv_seq<T> *I) {
         }
     }
 
-    time = log_runtime<T>(time);
-    log_memory_usage<T>(baseline,"balancing");
+    if (log) {
+        time = log_runtime<T>(time);
+        log_memory_usage<T>(baseline,"balancing");
+    }
 
     // balance the interval sequence
     T d,q_j,p_j,q_y,d_j,d_y;
@@ -135,8 +144,10 @@ void mdsb<T>::build_v1(interv_seq<T> *I) {
 
     md->k = k = T_in.size()-1;
 
-    time = log_runtime<T>(time);
-    log_memory_usage<T>(baseline,"building D_pair");
+    if (log) {
+        time = log_runtime<T>(time);
+        log_memory_usage<T>(baseline,"building D_pair");
+    }
     
     // build D_pair
     md->D_pair.resize(k+1);
@@ -146,8 +157,10 @@ void mdsb<T>::build_v1(interv_seq<T> *I) {
         it.next();
     }
 
-    time = log_runtime<T>(time);
-    log_memory_usage<T>(baseline,"building D_index");
+    if (log) {
+        time = log_runtime<T>(time);
+        log_memory_usage<T>(baseline,"building D_index");
+    }
 
     // build D_index
     md->D_index.resize(k);
@@ -168,9 +181,10 @@ void mdsb<T>::build_v1(interv_seq<T> *I) {
         md->D_index[j] = l;
     }
 
-    time = log_runtime<T>(time);
-    log_memory_usage<T>(baseline,"move datastructure built");
+    if (log) {
+        time = log_runtime<T>(time);
+        log_memory_usage<T>(baseline,"move datastructure built");
+    }
 
-    std::cout << std::endl << "peak memory allocation during build: ~ " << (malloc_count_peak()-baseline)/1000000 << "MB" << std::endl;
-    std::cout << std::endl;
+    if (log) std::cout << std::endl << "peak memory allocation during build: ~ " << (malloc_count_peak()-baseline)/1000000 << "MB" << std::endl << std::endl;
 }

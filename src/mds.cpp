@@ -3,7 +3,7 @@
 #include "../include/mds.hpp"
 
 template <typename T>
-mds<T>::mds(std::vector<std::pair<T,T>> *I, T n, T a, T b, int p, int v) {
+mds<T>::mds(std::vector<std::pair<T,T>> *I, T n, T a, T b, int p, int v, bool log) {
     this->n = n;
     this->k = I->size();
     
@@ -12,11 +12,33 @@ mds<T>::mds(std::vector<std::pair<T,T>> *I, T n, T a, T b, int p, int v) {
     assert(1 <= p && p <= omp_get_max_threads() && (T) p <= k);
     assert((v == 1 && p == 1) || v == 2 || v == 3);
 
-    mdsb<T> mdsb(this,I,n,a,b,p,v);
+    mdsb<T> mdsb(this,I,n,a,b,p,v,log);
+}
+
+template <typename T>
+mds<T>::mds(std::istream &in) {
+    in.read((char*)&n,sizeof(T));
+    in.read((char*)&k,sizeof(T));
+
+    D_pair.resize(k+1);
+    in.read((char*)&D_pair[0],2*(k+1)*sizeof(T));
+
+    D_index.resize(k);
+    in.read((char*)&D_index[0],k*sizeof(T));
 }
 
 template <typename T>
 mds<T>::~mds() {}
+
+template <typename T>
+uint64_t mds<T>::serialize(std::ostream &out) {
+    out.write((char*)&n,sizeof(T));
+    out.write((char*)&k,sizeof(T));
+    out.write((char*)&D_pair[0],2*(k+1)*sizeof(T));
+    out.write((char*)&D_index[0],k*sizeof(T));
+
+    return (3*k+4)*sizeof(T);
+}
 
 template <typename T>
 T mds<T>::intervals() {

@@ -56,8 +56,8 @@ class avl_tree {
     avl_node<T> *r; // root of the avl_tree
     avl_node<T> *fst; // first node (node with the smallest value)
     avl_node<T> *lst; // last node (node with the greatest value)
-    uint8_t h; // height
     uint64_t s; // size
+    uint8_t h; // height
 
     std::vector<avl_node<T>> *nds; // array of nodes that have been inserted whith insert_array()
 

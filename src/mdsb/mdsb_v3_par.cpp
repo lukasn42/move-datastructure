@@ -1,7 +1,7 @@
 #include "../../include/mdsb/mdsb.hpp"
 
 template <typename T>
-pair_tree_node<T>* mdsb<T>::insert_pair(ins_matr<T> &Q_ins_shrd, pair_list_node<T> *pln_IpB, pair_tree_node<T> *ptn_J, T q_u) {
+pair_tree_node<T>* mdsb<T>::insert_pair(ins_matr<T> &Q_ins, pair_list_node<T> *pln_IpB, pair_tree_node<T> *ptn_J, T q_u) {
     int i_p = omp_get_thread_num();
 
     T p_j = ptn_J->v.v.first;
@@ -32,10 +32,10 @@ pair_tree_node<T>* mdsb<T>::insert_pair(ins_matr<T> &Q_ins_shrd, pair_list_node<
         // Check if [p_j + d, p_j + d_j - 1] is the new first input interval in the the i_p_-th section.
         if (p_j >= s[i_p_]) {
             // If it is not, insert (p_j+d,q_j+d) after (p_j,q_j) in L_in[i_p_]
-            Q_ins_shrd[i_p_][i_p].emplace(ins_pair<T>{&ptn_NEW->v,&ptn_J->v});
+            Q_ins[i_p_][i_p].emplace(ins_pair<T>{&ptn_NEW->v,&ptn_J->v});
         } else {
             // Else insert (p_j+d,q_j+d) before the first pair in L_in[i_p_]
-            Q_ins_shrd[i_p_][i_p].emplace(ins_pair<T>{&ptn_NEW->v,NULL});
+            Q_ins[i_p_][i_p].emplace(ins_pair<T>{&ptn_NEW->v,NULL});
         }
     } else {
         // Else insert it in L_in[i_p].
@@ -60,7 +60,7 @@ pair_tree_node<T>* mdsb<T>::insert_pair(ins_matr<T> &Q_ins_shrd, pair_list_node<
 
             pair_list_node<T> *pln_ZpB = is_unbalanced_par(pln_Z,ptn_Y,ptn_Y_nxt);
             if (pln_ZpB != NULL) {
-                insert_pair(Q_ins_shrd,pln_ZpB,ptn_Y,q_u);
+                insert_pair(Q_ins,pln_ZpB,ptn_Y,q_u);
             }
         }
     }
@@ -71,16 +71,16 @@ template <typename T>
 void mdsb<T>::balance_v3_par() {
     /**
      * @brief [0..p-1][0..p-1] stores queues with triples (*p1,*p2,after);
-     *        Q_ins_shrd[i][j] stores the triples thread j inserts into thread i's section [s[i]..s[i+1]);
+     *        Q_ins[i][j] stores the triples thread j inserts into thread i's section [s[i]..s[i+1]);
      *        after controls whether p1 should be inseted after or before p2.
      */
-    ins_matr<T> Q_ins_shrd;
+    ins_matr<T> Q_ins;
     /**
-     * @brief swap variable for Q_ins_shrd
+     * @brief swap variable for Q_ins
      */
     ins_matr<T> Q_ins_swap;
 
-    Q_ins_shrd = ins_matr<T>(p,std::vector<std::queue<ins_pair<T>>>(p));
+    Q_ins = ins_matr<T>(p,std::vector<std::queue<ins_pair<T>>>(p));
     Q_ins_swap = ins_matr<T>(p,std::vector<std::queue<ins_pair<T>>>(p));
 
     bool done;
@@ -108,7 +108,7 @@ void mdsb<T>::balance_v3_par() {
 
                 // If [q_j, q_j + d_j - 1] is unbalanced, balance it and all output intervals starting before it, that might get unbalanced in the process.
                 if (pln_IpB != NULL) {
-                    it_outp_cur.set(insert_pair(Q_ins_shrd,pln_IpB,it_outp_cur.current(),it_outp_cur.current()->v.v.second));
+                    it_outp_cur.set(insert_pair(Q_ins,pln_IpB,it_outp_cur.current(),it_outp_cur.current()->v.v.second));
                     it_inp.set(pln_IpB);
                     continue;
                 }
@@ -133,7 +133,7 @@ void mdsb<T>::balance_v3_par() {
         do {
             #pragma omp single
             {
-                std::swap(Q_ins_shrd,Q_ins_swap);
+                std::swap(Q_ins,Q_ins_swap);
             }
 
             for (int i=0; i<p; i++) {
@@ -163,7 +163,7 @@ void mdsb<T>::balance_v3_par() {
 
                     pln_ZpB = is_unbalanced_par(pln_Z,ptn_Y,ptn_Y_nxt);
                     if (pln_ZpB != NULL) {
-                        insert_pair(Q_ins_shrd,pln_ZpB,ptn_Y,s[i_p+1]);
+                        insert_pair(Q_ins,pln_ZpB,ptn_Y,s[i_p+1]);
                     }
                 }
             }
@@ -175,7 +175,7 @@ void mdsb<T>::balance_v3_par() {
                 done = true;
                 for (int i=0; i<p; i++) {
                     for (int j=0; j<p; j++) {
-                        if (!Q_ins_shrd[i][j].empty()) {
+                        if (!Q_ins[i][j].empty()) {
                             done = false;
                             break;
                         }

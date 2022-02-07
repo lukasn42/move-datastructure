@@ -22,8 +22,8 @@ target_link_libraries(mds dl ips4o OpenMP::OpenMP_CXX)
 # move datastructure test
 add_executable(mds_test test/test.cpp)
 target_link_libraries(mds_test mds dl ips4o OpenMP::OpenMP_CXX)
-target_compile_options(mds_test PUBLIC -O3 -DNDEBUG -funroll-loops -finline-functions -march=native)
+target_compile_options(mds_test PUBLIC -O3 -DNDEBUG -fstrict-aliasing -funroll-loops -finline-functions -march=native)
 
 add_executable(mds_test_debug test/test.cpp)
 target_link_libraries(mds_test_debug mds dl ips4o OpenMP::OpenMP_CXX)
-target_compile_options(mds_test_debug PUBLIC -ggdb3 -Wall -Wextra -march=native)
+target_compile_options(mds_test_debug PUBLIC -ggdb3 -Wall -Wextra -march=native -fstrict-aliasing)
