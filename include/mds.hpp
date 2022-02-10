@@ -23,6 +23,11 @@ class mds {
 
     public:
     /**
+     * @brief creates an empty move datastructure
+     */
+    mds<T>();
+
+    /**
      * @brief creates a move datastructure out of I by building L_in and T_out from I, balancing I and then building D_pair and D_index
      * @param I interval sequence I
      * @param n n = p_{k-1} + d_{k-1}, k <= n

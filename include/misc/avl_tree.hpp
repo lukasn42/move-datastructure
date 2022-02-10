@@ -6,7 +6,6 @@
 
 /**
  * @brief node in an avl_tree
- * 
  * @tparam T value type
  */
 template <typename T>
@@ -47,7 +46,6 @@ struct avl_node {
 
 /**
  * @brief balanced binary search tree, for each node |height of left child - height of right child| <= 1 holds
- * 
  * @tparam T value type
  */
 template <typename T>

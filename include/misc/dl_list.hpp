@@ -5,7 +5,6 @@
 
 /**
  * @brief node in a dll_list
- * 
  * @tparam T value type
  */
 template <typename T>
@@ -32,7 +31,6 @@ struct dll_node {
 
 /**
  * @brief doubly linked list
- * 
  * @tparam T 
  */
 template <typename T>

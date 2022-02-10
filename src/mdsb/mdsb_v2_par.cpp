@@ -221,6 +221,8 @@ void mdsb<T>::balance_v2_par() {
             nodes_te = NULL;
         }
 
+        #pragma omp barrier
+
         // temporary variables
         pair_list_node<T> *pln_I,*pln_Im1,*pln_Z,*pln_ZpB;
         pair_tree_node<T> *ptn_Y,*ptn_Y_nxt;

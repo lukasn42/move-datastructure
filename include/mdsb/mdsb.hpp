@@ -40,7 +40,6 @@ class mdsb {
     public:
     /**
      * @brief builds the mds mds
-     * 
      * @param mds a mds that has not yet been built
      * @param I interval sequence
      * @param n n = p_{k-1} + d_{k-1}, k <= n
@@ -72,24 +71,25 @@ class mdsb {
     /**
      * @brief builds the move datastructure md
      * @param I interval sequence
+     * @param log enables log messages
      */
     void build_v1(interv_seq<T> *I, bool log);
 
     // ############################# V2/V3 #############################
 
     /** 
-     * @brief [0..p-1] doubly linked lists; L_in[i_t] stores the pairs (p_i,q_i) in ascending order of p_i,
-     *        where s[i_t+1] <= p_i < s[i_t+1] and i_t in [0..p-1]. L_in[0] ++ L_in[1] ++ ... ++ L_in[p-1] = I.
+     * @brief [0..p-1] doubly linked lists; L_in[i_p] stores the pairs (p_i,q_i) in ascending order of p_i,
+     *        where s[i_p+1] <= p_i < s[i_p+1] and i_p in [0..p-1]. L_in[0] ++ L_in[1] ++ ... ++ L_in[p-1] = I.
      */
     std::vector<pair_list<T>> L_in;
     /**
-     * @brief [0..p-1] avl trees; T_out[i_t] stores doubly linked list nodes of lists in L_in, for whiches pairs
-     *        (p_i,q_i) s[i_t+1] <= q_i < s[i_t+1] holds, in ascending order of q_i, with i_t in [0..p-1].
+     * @brief [0..p-1] avl trees; T_out[i_p] stores doubly linked list nodes of lists in L_in, for whiches pairs
+     *        (p_i,q_i) s[i_p+1] <= q_i < s[i_p+1] holds, in ascending order of q_i, with i_p in [0..p-1].
      */
     std::vector<pair_tree<T>> T_out;
     /**
      * @brief [0..p-1] section start positions in the range [0..n], 0 = s[0] < s[1] < ... < s[p-1] = n.
-     *        Before building T_out, q is chosen so that |T_out[0]| ~ |T_out[1]| ~ ... ~ |T_out[p-1]| (see descr. of T_out).
+     *        Before building T_out, s is chosen so that |T_out[0]| ~ |T_out[1]| ~ ... ~ |T_out[p-1]| (see descr. of T_out).
      */
     std::vector<T> s;
 
@@ -97,6 +97,7 @@ class mdsb {
      * @brief builds the move datastructure md
      * @param I interval sequence
      * @param v version
+     * @param log enables log messages
      */
     void build_v2_v3(interv_seq<T> *I, int v, bool log);
 
@@ -147,8 +148,10 @@ class mdsb {
 
     // ############################# V2 PARALLEL #############################
 
-    /*
+    /**
      * @brief reduces T_e by inserting pairs into L_in[i_p] and Q_ins[][]
+     * @param T_e reference to T_e
+     * @param Q_ins reference to Q_ins
      */
     void reduce_te(te_tree_par<T> &T_e, ins_matr<T> &Q_ins);
 
@@ -188,8 +191,8 @@ class mdsb {
      * @brief balances the output interval [q_j, q_j + d_j - 1] by inserting the newly created pair into T_out and Q_ins
      * @param Q_ins insert queues
      * @param pln_IpB (p_{i+b},q_{i+b}), [p_i, p_i + d_i - 1] must be the first input interval connected to [q_j, q_j + d_j - 1] in the permutation graph
-     * @param ptn_J (p_j,q_j), [q_j, q_j + d_j - 1] must be the first unbalanced output interval starting in [s[i_t]..q_u]
-     * @param q_u starting position of an output interval starting in [s[i_t]..s[i_t+1]]
+     * @param ptn_J (p_j,q_j), [q_j, q_j + d_j - 1] must be the first unbalanced output interval starting in [s[i_p]..q_u]
+     * @param q_u starting position of an output interval starting in [s[i_p]..s[i_p+1]]
      * @return the newly created pair
      */
     inline pair_tree_node<T>* insert_pair(ins_matr<T> &Q_ins, pair_list_node<T>* pln_IpB, pair_tree_node<T>* ptn_J, T q_u);

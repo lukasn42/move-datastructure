@@ -63,6 +63,8 @@ void mdsb<T>::balance_v3_seq() {
     // pointer to the pair (p_{i+b},q_{i+b}), return value of is_unbalanced_seq((p_i,q_i),(p_j,q_j))
     pair_list_node<T> *pln_IpB;
 
+    bool stop = false;
+
     // At the start of each iteration, [p_i, p_i + d_i - 1] is the first input interval connected to [q_j, q_j + d_j - 1] in the permutation graph
     // and all output intervals starting before [q_j, q_j + d_j - 1] are balanced.
     do {
@@ -76,14 +78,14 @@ void mdsb<T>::balance_v3_seq() {
 
         // Find the next output interval with an incoming edge in the permutation graph and the first input interval connected to it.
         do {
-            if (!it_outp.has_next()) {return;}
+            if (!it_outp.has_next()) {stop = true; break;}
             it_outp.next();
             while (it_inp.current()->v.first < it_outp.current()->v.v.second) {
                 it_inp.next();
-                if (!it_inp.has_next()) {return;}
+                if (!it_inp.has_next()) {stop = true; break;}
             }
-        } while (it_inp.current()->v.first >= it_outp.current()->v.v.second + interval_length_seq(&it_outp.current()->v));
-    } while (true);
+        } while (!stop && it_inp.current()->v.first >= it_outp.current()->v.v.second + interval_length_seq(&it_outp.current()->v));
+    } while (!stop);
 
     L_in[0].remove_node(L_in[0].tail());
 }

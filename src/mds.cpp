@@ -3,6 +3,9 @@
 #include "../include/mds.hpp"
 
 template <typename T>
+mds<T>::mds() {}
+
+template <typename T>
 mds<T>::mds(std::vector<std::pair<T,T>> *I, T n, T a, T b, int p, int v, bool log) {
     this->n = n;
     this->k = I->size();
