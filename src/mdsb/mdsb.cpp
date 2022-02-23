@@ -21,14 +21,14 @@ extern "C" {
 #include "mdsb_v2_v3_seq_par.cpp"
 #include "mdsb_v3_par.cpp"
 #include "mdsb_v3_seq.cpp"
+#include "mdsb_v4_par.cpp"
 
 template <typename T>
-mdsb<T>::mdsb(mds<T> *md, interv_seq<T> *I, T n, T a, T b, int p, int v, bool log) {
+mdsb<T>::mdsb(mds<T> *md, interv_seq<T> *I, T n, T a, int p, int v, bool log) {
     this->md = md;
     this->n = n;
     this->k = I->size();
     this->a = a;
-    this->b = b;
     this->p = p;
 
     omp_set_num_threads(p);
@@ -36,7 +36,7 @@ mdsb<T>::mdsb(mds<T> *md, interv_seq<T> *I, T n, T a, T b, int p, int v, bool lo
     if (v == 1) {
         build_v1(I,log);
     } else {
-        build_v2_v3(I,v,log);
+        build_v2_v3_v4(I,v,log);
     }
 }
 
@@ -46,7 +46,7 @@ mdsb<T>::~mdsb() {
 }
 
 template <typename T>
-void mdsb<T>::build_v2_v3(interv_seq<T> *I, int v, bool log) {
+void mdsb<T>::build_v2_v3_v4(interv_seq<T> *I, int v, bool log) {
     size_t baseline;
     std::chrono::steady_clock::time_point time;
 
@@ -69,8 +69,10 @@ void mdsb<T>::build_v2_v3(interv_seq<T> *I, int v, bool log) {
     if (p > 1) {
         if (v == 2) {
             balance_v2_par();
-        } else {
+        } else if (v == 3) {
             balance_v3_par();
+        } else {
+            balance_v4_par();
         }
     } else {
         if (v == 2) {

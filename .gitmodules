@@ -7,3 +7,6 @@
 [submodule "extern/libsais"]
 	path = extern/libsais
 	url = https://github.com/IlyaGrebnov/libsais.git
+[submodule "extern/concurrentqueue"]
+	path = extern/concurrentqueue
+	url = https://github.com/cameron314/concurrentqueue

@@ -1,13 +1,13 @@
 #include "../../include/mdsb/mdsb.hpp"
 
 template <typename T>
-pair_tree_node<T>* mdsb<T>::balance_upto_seq(pair_list_node<T>* pln_IpB, pair_tree_node<T>* ptn_J, T q_u) {
+pair_tree_node<T>* mdsb<T>::balance_upto_seq(pair_list_node<T>* pln_IpA, pair_tree_node<T>* ptn_J, T q_u) {
     T p_j = ptn_J->v.v.first;
     T q_j = ptn_J->v.v.second;
     T d_j = interval_length_seq(&ptn_J->v);
     
-    // d = p_{i+b} - q_j is the maximum integer, so that [q_j, q_j + d - 1] has b incoming edges in the permutation graph.
-    T d = pln_IpB->v.first - q_j;
+    // d = p_{i+2a} - q_j is the maximum integer, so that [q_j, q_j + d - 1] has a incoming edges in the permutation graph.
+    T d = pln_IpA->v.first - q_j;
 
     // Create the pair (p_j + d, q_j + d), which creates two new input intervals [p_j, p_j + d - 1] and [p_j + d, p_j + d_j - 1].
     pair_tree_node<T> *ptn_NEW = new pair_tree_node<T>(pair_list_node<T>(interv_pair<T>{p_j + d, q_j + d}));
@@ -19,13 +19,13 @@ pair_tree_node<T>* mdsb<T>::balance_upto_seq(pair_list_node<T>* pln_IpB, pair_tr
 
     Case 1: If p_j + d lies in [q_u, q_u + d_u - 1], then [q_u, q_u + d_u - 1] = [q_y, q_y + d_y - 1]. p_j + d = q_u obviously is not possible.
             In general, once balance_upto creates a new input interval starting within [q_u, q_u + d_u - 1], the sequence of recursive calls ends.
-            Because of that, [q_u, q_u + d_u - 1] had b incoming edges in the permutation graph before [p_j + d, p_j + d_j - 1] was created.
-            Therefore after that [q_y, q_y + d_y - 1] has b+1 < a incoming edges in the permutation graph, hence it is balanced.
+            Because of that, [q_u, q_u + d_u - 1] had a incoming edges in the permutation graph before [p_j + d, p_j + d_j - 1] was created.
+            Therefore after that [q_y, q_y + d_y - 1] has a+1 < 2a incoming edges in the permutation graph, hence it is balanced.
 
     Case 2: Else if p_j + d >= q_u + d_u, then it is irrelevant if [q_y, q_y + d_y - 1] is unbalanced, because only output intervals upto [q_u, q_u + d_u - 1] must be balanced.
 
     Case 3: Else if p_j + d lies in [q_j, q_j + d - 1] or [q_j + d, q_j + d_j - 1], then [q_y, q_y + d_y - 1] equals one of them.
-            Because they have at most b+1 < a and a-b+1 < a incoming edges in the permutation graph, [q_y, q_y + d_y - 1] cannot be unbalanced.
+            Because they have at most a+1 < 2a and 2a-a+1 < 2a incoming edges in the permutation graph, [q_y, q_y + d_y - 1] cannot be unbalanced.
     
     Case 4: Else balance [q_y, q_y + d_y - 1], if it is unbalanced.
     */
@@ -40,10 +40,10 @@ pair_tree_node<T>* mdsb<T>::balance_upto_seq(pair_list_node<T>* pln_IpB, pair_tr
             pln_Z = pln_Z->pr;
         }
 
-        pair_list_node<T> *pln_ZpB = is_unbalanced_seq(pln_Z,ptn_Y);
+        pair_list_node<T> *pln_ZpA = is_unbalanced_seq(pln_Z,ptn_Y);
 
-        if (pln_ZpB != NULL) {
-            balance_upto_seq(pln_ZpB,ptn_Y,q_u);
+        if (pln_ZpA != NULL) {
+            balance_upto_seq(pln_ZpA,ptn_Y,q_u);
         }
     }
 
@@ -60,8 +60,8 @@ void mdsb<T>::balance_v3_seq() {
     // it_outp points to the pair (p_j,q_j).
     typename pair_tree<T>::avl_it it_outp = T_out[0].iterator(T_out[0].minimum());
 
-    // pointer to the pair (p_{i+b},q_{i+b}), return value of is_unbalanced_seq((p_i,q_i),(p_j,q_j))
-    pair_list_node<T> *pln_IpB;
+    // pointer to the pair (p_{i+2a},q_{i+2a}), return value of is_unbalanced_seq((p_i,q_i),(p_j,q_j))
+    pair_list_node<T> *pln_IpA;
 
     bool stop = false;
 
@@ -69,9 +69,9 @@ void mdsb<T>::balance_v3_seq() {
     // and all output intervals starting before [q_j, q_j + d_j - 1] are balanced.
     do {
         // If [q_j, q_j + d_j - 1] is unbalanced, balance it and all output intervals starting before it, that might get unbalanced in the process.
-        pln_IpB = is_unbalanced_seq(it_inp.current(),it_outp.current());
-        if (pln_IpB != NULL) {
-            it_inp.set(pln_IpB);
+        pln_IpA = is_unbalanced_seq(it_inp.current(),it_outp.current());
+        if (pln_IpA != NULL) {
+            it_inp.set(pln_IpA);
             it_outp.set(balance_upto_seq(it_inp.current(),it_outp.current(),it_outp.current()->v.v.second));
             continue;
         }

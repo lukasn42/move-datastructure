@@ -17,21 +17,26 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
     // [0..p-1] nodes_tout[i_p] stores arrays to build T_out[i_p] out of.
     std::vector<std::vector<pair_tree_node<T>>*> nodes_tout(p);
 
-    {
-        // [0..p-1] x[i] stores the cumulative length of the sections 0..i-1
-        std::vector<T> x(p+1);
-        x[0] = 0;
-        x[1] = 1+(k-1)/p; // length of the sections 0..p-1
-        x[p] = k;
-        for (int i=2; i<p; i++) {
-            x[i] = x[i-1]+x[1];
-        }
+    // [0..p-1] x[i] stores the cumulative length of the lists in L_in[0..i-1]
+    std::vector<T> x(p+1);
+    x[0] = 0;
+    x[1] = 1+(k-1)/p;
+    x[p] = k;
+    for (int i=2; i<p; i++) {
+        x[i] = x[i-1]+x[1];
+    }
 
-        /* section starting positions u[0..p-1] in I with 0 = u[0] < u[1] < ... < u[p] = k, for each pair
-           (p_i,q_i) in I[u[j]..u[j+1]-1], s[j] <= p_i < s[j+1] holds, with i in [0..k-1] and j in [0..p-1] */
+    s = std::vector<T>(p+1);
+    s[0] = 0;
+    s[p] = n;
+    for (int i=1; i<p; i++) {
+        s[i] = I->at(x[i]).first;
+    }
+
+    {
         std::vector<T> u;
-        
         std::vector<T> pi_m1(0);
+
         {
             // create identity permutation pi of [0..k-1]
             std::vector<T> pi(k);
@@ -48,13 +53,6 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
                 ips4o::sort(pi.begin(),pi.end(),comp);
             }
 
-            s = std::vector<T>(p+1);
-            s[0] = 0;
-            s[p] = n;
-            for (int i=1; i<p; i++) {
-                s[i] = I->at(pi[x[i]]).second;
-            }
-
             u = std::vector<T>(p+1);
             u[0] = 0;
             u[p] = k;
@@ -62,16 +60,16 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
             {
                 int i_p = omp_get_thread_num();
 
-                // find first input interval [p_i, p_i + d_i -1] starting at or after s[i_p]
+                // find first output interval starting at or after s[i_p]
                 T l = 0;
                 T r = k-1;
                 T m;
                 while (l != r) {
                     m = (l+r)/2;
-                    if (I->at(m).first >= s[i_p]) {
-                        r = m;
-                    } else {
+                    if (I->at(pi[m]).second < s[i_p]) {
                         l = m+1;
+                    } else {
+                        r = m;
                     }
                 }
                 u[i_p] = l;
@@ -88,23 +86,34 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
         // create nodes_tout
         #pragma omp parallel for num_threads(p)
         for (int i=0; i<p; i++) {
-            nodes_tout[i] = new std::vector<pair_tree_node<T>>(x[i+1]-x[i]);
+            nodes_tout[i] = new std::vector<pair_tree_node<T>>(u[i+1]-u[i]);
         }
 
         // build L_in[] and nodes_tout[] according to pi^{-1}
-        T px1 = p*x[1];
         #pragma omp parallel num_threads(p)
         {
             int i_p = omp_get_thread_num();
 
-            T l = u[i_p];
-            T r = u[i_p+1];
+            T l = x[i_p];
+            T r = x[i_p+1];
 
             int i_1; // index in nodes_tout[] to insert the current pair in
             T i_2; // index in nodes_tout[i_1][] to insert the current pair in
+            int b,e,m;
             for (T i=l; i<r; i++) {
-                i_1 = (pi_m1[i]*p)/px1;
-                i_2 = pi_m1[i]-x[i_1];
+                b = 0;
+                e = p-1;
+                while (b != e) {
+                    m = (b+e)/2+1;
+                    if (u[m] > pi_m1[i]) {
+                        e = m-1;
+                    } else {
+                        b = m;
+                    }
+                }
+                i_1 = b;
+
+                i_2 = pi_m1[i]-u[i_1];
                 nodes_tout[i_1]->at(i_2).v.v = I->at(i);
                 L_in[i_p].push_back_node(&nodes_tout[i_1]->at(i_2).v);
             }
@@ -116,9 +125,42 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
     // build T_out[] from nodes_tout[]
     #pragma omp parallel num_threads(p)
     {
-        int i_p = omp_get_thread_num();
+        #pragma omp single
+        {
+            for (int i_p=0; i_p<p; i_p++) {
+                #pragma omp task
+                {
+                    T_out[i_p].insert_array(nodes_tout[i_p],(int) std::ceil(p*(nodes_tout[i_p]->size()/(double) k)));
+                }
+            }
+        }
 
-        T_out[i_p].insert_array(nodes_tout[i_p]);
+        #pragma omp taskwait
+    }
+
+    for (int i_p=1; i_p<p; i_p++) {
+        if (T_out[i_p].empty() || T_out[i_p].minimum()->v.v.second > s[i_p]) {
+            pair_list_node<T> *pln_max_prev = &T_out[i_p-1].maximum()->v;
+
+            int l = 0;
+            int r = p-1;
+            int m;
+            while (l != r) {
+                m = (l+r)/2+1;
+                if (s[m] > pln_max_prev->v.first) {
+                    r = m-1;
+                } else {
+                    l = m;
+                }
+            }
+            int i = l;
+
+            pair_list_node<T> *pln_cut = &T_out[i_p].insert_or_update(pair_list_node<T>(interv_pair<T>{pln_max_prev->v.first+s[i_p]-pln_max_prev->v.second,s[i_p]}))->v;
+            L_in[i].insert_after_node(pln_cut,&T_out[i_p-1].maximum()->v);
+        }
+    }
+
+    for (int i_p=0; i_p<p; i_p++) {
         T_out[i_p].insert_or_update_in(pair_list_node<T>(interv_pair<T>{s[i_p+1],s[i_p+1]}),T_out[i_p].maximum());
     }
 }
@@ -163,7 +205,7 @@ void mdsb<T>::delete_lin_tout() {
         int i_p = omp_get_thread_num();
 
         L_in[i_p].disconnect_nodes();
-        T_out[i_p].delete_nodes();
+        T_out[i_p].delete_nodes((int) std::ceil(p*(T_out[i_p].size()/(double) k)));
     }
 }
 
@@ -201,27 +243,27 @@ pair_list_node<T>* mdsb<T>::is_unbalanced_seq(pair_list_node<T>* pln_I, pair_tre
     T l = ptn_J->v.v.second;
     T r = l + interval_length_seq(&ptn_J->v) - 1;
 
-    // If |[l,r]| < a, there cannot be at least a input intervals connected to [l,r] in the permutation graph.
-    if (r-l+1 < a) return NULL;
+    // If |[l,r]| < 2a, there cannot be at least 2a input intervals connected to [l,r] in the permutation graph.
+    if (r-l+1 < 2*a) return NULL;
 
-    // Count the number i of input intervals connected to [l,r] in the permutation graph and stop as soon as i == b.
+    // Count the number i of input intervals connected to [l,r] in the permutation graph and stop as soon as i == a.
     uint8_t i = 1;
-    while (i < b+1 && pln_I->sc->sc != NULL && pln_I->sc->v.first <= r) {
+    while (i <= a && pln_I->sc->sc != NULL && pln_I->sc->v.first <= r) {
         pln_I = pln_I->sc;
         i++;
     }
-    if (i != b+1) return NULL; // i < b < a-1 => [l,r] is unbalanced
+    if (i <= a) return NULL; // i < a < 2a => [l,r] is balanced
 
-    pair_list_node<T>* pln_IpB = pln_I;
+    pair_list_node<T>* pln_IpA = pln_I;
 
-    // Count further and stop as soon as i == a.
-    while (i < a && pln_I->sc->sc != NULL && pln_I->sc->v.first <= r) {
+    // Count further and stop as soon as i == 2a.
+    while (i < 2*a && pln_I->sc->sc != NULL && pln_I->sc->v.first <= r) {
         pln_I = pln_I->sc;
         i++;
     }
-    if (i != a) return NULL; // i < a => [l,r] is unbalanced
+    if (i < 2*a) return NULL; // i < 2a => [l,r] is balanced
 
-    return pln_IpB;
+    return pln_IpA;
 }
 
 template <typename T>
@@ -230,25 +272,25 @@ pair_list_node<T>* mdsb<T>::is_unbalanced_par(pair_list_node<T>* pln_I, pair_tre
     T l = ptn_J->v.v.second;
     T r = ptn_J_nxt->v.v.second - 1;
 
-    // If |[l,r]| < a, there cannot be at least a input intervals connected to [l,r] in the permutation graph.
-    if (r-l+1 < a) return NULL;
+    // If |[l,r]| < 2a, there cannot be at least 2a input intervals connected to [l,r] in the permutation graph.
+    if (r-l+1 < 2*a) return NULL;
 
-    // Count the number i of input intervals connected to [l,r] in the permutation graph and stop as soon as i == b.
+    // Count the number i of input intervals connected to [l,r] in the permutation graph and stop as soon as i == a.
     uint8_t i = 1;
-    while (i < b+1 && pln_I->sc != NULL && pln_I->sc->v.first <= r) {
+    while (i <= a && pln_I->sc != NULL && pln_I->sc->v.first <= r) {
         pln_I = pln_I->sc;
         i++;
     }
-    if (i != b+1) return NULL; // i < b < a-1 => [l,r] is unbalanced
+    if (i <= a) return NULL; // i < a < 2a => [l,r] is balanced
 
-    pair_list_node<T>* pln_IpB = pln_I;
+    pair_list_node<T>* pln_IpA = pln_I;
 
-    // Count further and stop as soon as i == a.
-    while (i < a && pln_I->sc != NULL && pln_I->sc->v.first <= r) {
+    // Count further and stop as soon as i == 2a.
+    while (i < 2*a && pln_I->sc != NULL && pln_I->sc->v.first <= r) {
         pln_I = pln_I->sc;
         i++;
     }
-    if (i != a) return NULL; // i < a => [l,r] is unbalanced
+    if (i < 2*a) return NULL; // i < 2a => [l,r] is balanced
 
-    return pln_IpB;
+    return pln_IpA;
 }

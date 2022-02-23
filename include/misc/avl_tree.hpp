@@ -138,9 +138,10 @@ class avl_tree {
      * @param nds array of avl_nodes, must be sorted according to the comparison operators
      * @param l l in [0..|nds|-1]
      * @param r r in [0..|nds|-1], l <= r
+     * @param max_tasks maximum number of tasks to start
      * @return the root of the avl subtree
      */
-    inline avl_node<T>* make_subtree(std::vector<avl_node<T>> *nds, int l, int r);
+    inline avl_node<T>* make_subtree(std::vector<avl_node<T>> *nds, int l, int r, int max_tasks = 1);
 
     /**
      * @brief deletes the avl_node n
@@ -151,8 +152,9 @@ class avl_tree {
     /**
      * @brief recursively deletes all nodes in the subtree of node n
      * @param n an avl_node
+     * @param max_tasks maximum number of tasks to start
      */
-    inline void delete_subtree(avl_node<T> *n);
+    inline void delete_subtree(avl_node<T> *n, int max_tasks = 1);
 
     public:
     /**
@@ -192,14 +194,16 @@ class avl_tree {
 
     /**
      * @brief deletes all nodes in the avl_tree in
+     * @param max_tasks maximum number of tasks to start
      */
-    void delete_nodes();
+    void delete_nodes(int max_tasks = 1);
 
     /**
      * @brief inserts the nodes in nds into the avl_tree if it is empty
      * @param nds sorted array of avl_nodes
+     * @param max_tasks maximum number of tasks to start
      */
-    void insert_array(std::vector<avl_node<T>> *nds);
+    void insert_array(std::vector<avl_node<T>> *nds, int max_tasks = 1);
 
     /**
      * @brief returns the node with the smallest value in the avl_tree

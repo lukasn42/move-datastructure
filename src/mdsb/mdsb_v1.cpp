@@ -64,8 +64,8 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
         while (node_cur != NULL) {
             if (node_cur->v.first < q_next) {
                 e++;
-                if (e == a) {
-                    // If there are at least a, insert it's corresponding pair into T_e.
+                if (e == 2*a) {
+                    // If there are at least 2a, insert it's corresponding pair into T_e.
                     T_e.insert_or_update(I->at(i));
                     break;
                 }
@@ -93,10 +93,10 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
         q_j = min->v.second;
         T_e.remove(min->v);
 
-        // Find the b+1-st input interval in [q_j, q_j + d_j - 1] and set d = p_{i+b} - q_j.
-        // d is the smallest integer, so that [q_j, q_j + d - 1] has b incoming edges in the permutation graph.
+        // Find the a+1-st input interval in [q_j, q_j + d_j - 1] and set d = p_{i+a} - q_j.
+        // d is the smallest integer, so that [q_j, q_j + d - 1] has a incoming edges in the permutation graph.
         node_Ipb = T_in.minimum_geq(std::make_pair(q_j,0));
-        for (T i=0; i<b; i++) {
+        for (T i=0; i<a; i++) {
             node_Ipb = node_Ipb->nxt();
         }
         d = node_Ipb->v.first-q_j;
@@ -112,7 +112,7 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
         q_y = pair_Y.second;
 
         // The number of input intervals connected to [q_j + d, q_j + d_j - 1] and [q_y, q_y + d_y - 1] may have changed.
-        // For each, check if it has at least a incoming edges in the permutation graph and insert it into T_e, if it has.
+        // For each, check if it has at least 2a incoming edges in the permutation graph and insert it into T_e, if it has.
         d_j = node_NEW->nxt()->v.second-q_j;
         d_y = node_Y->nxt()->v.second-q_y;
         intervals_to_check = {
@@ -128,8 +128,8 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
             while (node_cur != NULL) {
                 if (node_cur->v.first <= std::get<1>(tup)) {
                     e++;
-                    // If there are at least a, insert it's corresponding pair into T_e.
-                    if (e == a) {
+                    // If there are at least 2a, insert it's corresponding pair into T_e.
+                    if (e == 2*a) {
                         T_e.insert_or_update(std::get<2>(tup));
                         break;
                     }

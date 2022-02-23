@@ -9,6 +9,9 @@ find_package(OpenMP)
 # ips4o
 add_subdirectory(extern/ips4o)
 
+# concurrentqueue
+add_subdirectory(extern/concurrentqueue)
+
 # malloc_count
 include_directories(extern/malloc_count)
 

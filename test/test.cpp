@@ -27,27 +27,25 @@ std::chrono::steady_clock::time_point log_runtime(std::chrono::steady_clock::tim
 
 void log_invalid_input() {
     std::cout << "invalid input, usage: a b p v file" << std::endl;
-    std::cout << "    a: minimum number of incoming edges in the permutation graph, an output interval must have, to get cut, 4<=a" << std::endl;
-    std::cout << "    b: number of remaining incoming edges after an output interval is cut, 2<=b<a-1" << std::endl;
-    std::cout << "    p: number of threads to use (1 for v=1, 1<=p<=n for 2/3)" << std::endl;
-    std::cout << "    v: build method version (1/2/3)" << std::endl;
+    std::cout << "    a: balancing parameter, restricts size increase to the factor (1+1/(a-1))" << std::endl;
+    std::cout << "    p: number of threads to use (1 for v=1, 1<=p<=n for 2/3, 2<=p<=n for 4)" << std::endl;
+    std::cout << "    v: build method version (1/2/3/4)" << std::endl;
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 6) {
+    if (argc != 5) {
         log_invalid_input();
         return -1;
     }
 
     int a = atoi(argv[1]);
-    int b = atoi(argv[2]);
-    int p = atoi(argv[3]);
-    int v = atoi(argv[4]);
+    int p = atoi(argv[2]);
+    int v = atoi(argv[3]);
 
     if (!(
-        2 <= b && b < a-1 &&
+        2 <= a &&
         1 <= p && p <= omp_get_max_threads() &&
-        ((v == 1 && p == 1) || v == 2 || v == 3)
+        ((v == 1 && p == 1) || v == 2 || v == 3 || (v == 4 && 2 <= p))
     )) {
         log_invalid_input();
         return -1;
@@ -57,7 +55,7 @@ int main(int argc, char *argv[]) {
     std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now();
 
     // read file into T
-    std::ifstream file(argv[5]);
+    std::ifstream file(argv[4]);
     if (!file.good()) {
         std::cout << "invalid input: could not read textfile" << std::endl;
         return -1;
@@ -135,7 +133,7 @@ int main(int argc, char *argv[]) {
         time = log_runtime(time,"I_SA sorted");
         
         // build F_I_SA from I_SA
-        mds<uint32_t> F_I_SA(I_SA,n,a,b,p,v,true);
+        mds<uint32_t> F_I_SA(I_SA,n,a,p,v,true);
         I_SA = NULL;
         time = log_runtime(time,"F_I_SA calculated");
         std::cout << "k+t = " << F_I_SA.intervals() << ", (k+t)/k ~ " << std::ceil(F_I_SA.intervals()/(double) r * 1000.0)/1000.0 << std::endl;
@@ -154,7 +152,7 @@ int main(int argc, char *argv[]) {
     time = log_runtime(time,"I_LF calculated");
 
     // build F_I_LF from I_LF
-    mds<uint32_t> F_I_LF(I_LF,n,a,b,p,v,true);
+    mds<uint32_t> F_I_LF(I_LF,n,a,p,v,true);
     I_LF = NULL;
     time = log_runtime(time,"F_I_LF calculated");
     std::cout << "k+t = " << F_I_LF.intervals() << ", (k+t)/k ~ " << std::ceil(F_I_LF.intervals()/(double) r * 1000.0)/1000.0 << std::endl;

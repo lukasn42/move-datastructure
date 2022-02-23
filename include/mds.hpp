@@ -31,14 +31,12 @@ class mds {
      * @brief creates a move datastructure out of I by building L_in and T_out from I, balancing I and then building D_pair and D_index
      * @param I interval sequence I
      * @param n n = p_{k-1} + d_{k-1}, k <= n
-     * @param a (optional) minimum number of incoming edges in the permutation graph, an output interval must have, to get cut, 4 <= a (default = 4)
-     * @param b (optional) number of remaining incoming edges after an output interval is cut, 2 <= b < a-1 (default = 2)
+     * @param a (optional) balancing parameter, restricts size increase to the factor (1+1/(a-1)), 2 <= a (default = 2)
      * @param p (optional) number of threads to use (default: all threads)
-     * @param p number of threads to use (default: all threads)
-     * @param v version of the build method (1/2/3) (default: 3)
+     * @param v version of the build method (1/2/3/4) (default: 3)
      * @param log enables log messages during build process (default: false)
      */
-    mds<T>(std::vector<std::pair<T,T>> *I, T n, T a = 4, T b = 2, int p = omp_get_max_threads(), int v = 3, bool log = false);
+    mds<T>(std::vector<std::pair<T,T>> *I, T n, T a = 2, int p = omp_get_max_threads(), int v = 3, bool log = false);
 
     /**
      * @brief creates a move datastructure from an input stream
