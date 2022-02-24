@@ -54,10 +54,10 @@ template <typename T>
 void mdsb<T>::balance_v3_seq() {
     L_in[0].push_back_node(&T_out[0].maximum()->v);
 
-    // it_inp points to to the pair (p_i,q_i).
+    // points to to the pair (p_i,q_i).
     typename pair_list<T>::dll_it it_inp = L_in[0].iterator(L_in[0].head());
 
-    // it_outp points to the pair (p_j,q_j).
+    // points to the pair (p_j,q_j).
     typename pair_tree<T>::avl_it it_outp = T_out[0].iterator(T_out[0].minimum());
 
     // pointer to the pair (p_{i+2a},q_{i+2a}), return value of is_unbalanced_seq((p_i,q_i),(p_j,q_j))

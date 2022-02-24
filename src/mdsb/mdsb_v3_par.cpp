@@ -57,15 +57,10 @@ pair_tree_node<T>* mdsb<T>::insert_pair(ins_matr<T> &Q_ins, pair_list_node<T> *p
 
 template <typename T>
 void mdsb<T>::balance_v3_par() {
-    /**
-     * @brief [0..p-1][0..p-1] stores queues with triples (*p1,*p2,after);
-     *        Q_ins[i][j] stores the triples thread j inserts into thread i's section [s[i]..s[i+1]);
-     *        after controls whether p1 should be inseted after or before p2.
-     */
+    /** @brief [0..p-1] stores queues with tuples (*p1,*p2);
+     *        Q_ins[i] stores the tuples to insert into thread i's section [s[i]..s[i+1] */
     ins_matr<T> Q_ins;
-    /**
-     * @brief swap variable for Q_ins
-     */
+    /** @brief swap variable for Q_ins */
     ins_matr<T> Q_ins_swap;
 
     Q_ins = ins_matr<T>(p,std::vector<std::queue<ins_pair<T>>>(p));
@@ -77,11 +72,11 @@ void mdsb<T>::balance_v3_par() {
     {
         int i_p = omp_get_thread_num();
 
-        // it_inp points to to the pair (p_i,q_i).
+        // points to to the pair (p_i,q_i).
         typename pair_list<T>::dll_it it_inp = L_in[i_p].iterator();
-        // it_outp points to the pair (p_j,q_j).
+        // points to the pair (p_j,q_j).
         typename pair_tree<T>::avl_it it_outp_cur = T_out[i_p].iterator();
-        // it_outp points to the pair (p_{j+1},q_{j+1}).
+        // points to the pair (p_{j'},q_{j'}), where q_j + d_j = q_{j'}.
         typename pair_tree<T>::avl_it it_outp_nxt = T_out[i_p].iterator(T_out[i_p].second_smallest());
 
         // temporary variables

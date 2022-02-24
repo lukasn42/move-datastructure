@@ -19,6 +19,9 @@ mds<T>::mds(std::vector<std::pair<T,T>> *I, T n, T a, int p, int v, bool log) {
 }
 
 template <typename T>
+mds<T>::~mds() {}
+
+template <typename T>
 mds<T>::mds(std::istream &in) {
     in.read((char*)&n,sizeof(T));
     in.read((char*)&k,sizeof(T));
@@ -29,9 +32,6 @@ mds<T>::mds(std::istream &in) {
     D_index.resize(k);
     in.read((char*)&D_index[0],k*sizeof(T));
 }
-
-template <typename T>
-mds<T>::~mds() {}
 
 template <typename T>
 uint64_t mds<T>::serialize(std::ostream &out) {

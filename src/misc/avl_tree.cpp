@@ -302,7 +302,6 @@ void avl_tree<T>::delete_subtree(avl_node<T> *n, int max_tasks) {
         if (n->rc != NULL) {
             delete_subtree(n->rc,max_tasks/2);
         }
-        #pragma omp taskwait
     } else {
         if (n->lc != NULL) {
             delete_subtree(n->lc);
@@ -368,6 +367,7 @@ template <typename T>
 void avl_tree<T>::delete_nodes(int max_tasks) {
     if (!empty()) {
         delete_subtree(r,max_tasks);
+        #pragma omp taskwait
         fst = lst = r = NULL;
         h = s = 0;
         if (nds != NULL) {

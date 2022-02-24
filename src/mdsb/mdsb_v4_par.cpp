@@ -60,8 +60,8 @@ pair_tree_node<T>* mdsb<T>::insert_pair_conc(ins_matr_conc<T> &Q_ins, std::vecto
 
 template <typename T>
 void mdsb<T>::balance_v4_par() {
-    /** @brief [0..p-1] stores queues with triples (*p1,*p2);
-     *        Q_ins[i] stores the triples to insert into thread i's section [s[i]..s[i+1] */
+    /** @brief [0..p-1] stores queues with tuples (*p1,*p2);
+     *        Q_ins[i] stores the tuples to insert into thread i's section [s[i]..s[i+1] */
     ins_matr_conc<T> Q_ins(p);
 
     /** @brief [0..p-1] D_done[i] stores, whether thread i is done */
@@ -80,11 +80,11 @@ void mdsb<T>::balance_v4_par() {
          * which the current thread has inserted into it's insert queue, into it's section */
         std::vector<bool> D_inserted(p,true);
 
-        // it_inp points to to the pair (p_i,q_i).
+        // points to to the pair (p_i,q_i).
         typename pair_list<T>::dll_it it_inp = L_in[i_p].iterator();
-        // it_outp points to the pair (p_j,q_j).
+        // points to the pair (p_j,q_j).
         typename pair_tree<T>::avl_it it_outp_cur = T_out[i_p].iterator();
-        // it_outp points to the pair (p_{j+1},q_{j+1}).
+        // points to the pair (p_{j'},q_{j'}), where q_j + d_j = q_{j'}.
         typename pair_tree<T>::avl_it it_outp_nxt = T_out[i_p].iterator(T_out[i_p].second_smallest());
 
         // temporary variables

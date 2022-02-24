@@ -17,7 +17,7 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
     // [0..p-1] nodes_tout[i_p] stores arrays to build T_out[i_p] out of.
     std::vector<std::vector<pair_tree_node<T>>*> nodes_tout(p);
 
-    // [0..p-1] x[i] stores the cumulative length of the lists in L_in[0..i-1]
+    // [0..p-1], x[i] stores the number of input intervals in I starting before s[i]
     std::vector<T> x(p+1);
     x[0] = 0;
     x[1] = 1+(k-1)/p;
@@ -53,6 +53,7 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
                 ips4o::sort(pi.begin(),pi.end(),comp);
             }
 
+            // [0..p-1], u[i] stores the number of output intervals in I starting before s[i]
             u = std::vector<T>(p+1);
             u[0] = 0;
             u[p] = k;
@@ -60,7 +61,7 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
             {
                 int i_p = omp_get_thread_num();
 
-                // find first output interval starting at or after s[i_p]
+                // find the smallest index j in [0..k-1], so that s[i_p] <= I[pi[j]]
                 T l = 0;
                 T r = k-1;
                 T m;
@@ -101,6 +102,8 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
             T i_2; // index in nodes_tout[i_1][] to insert the current pair in
             int b,e,m;
             for (T i=l; i<r; i++) {
+
+                // find i_1, so that u[i_1] <= pi^-1[i] < u[i_1+1]
                 b = 0;
                 e = p-1;
                 while (b != e) {
@@ -138,6 +141,7 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
         #pragma omp taskwait
     }
 
+    // make sure each avl tree T_out[i_p], with i_p in [0..p-1], contains an output interval starting at s[i_p]
     for (int i_p=1; i_p<p; i_p++) {
         if (T_out[i_p].empty() || T_out[i_p].minimum()->v.v.second > s[i_p]) {
             pair_list_node<T> *pln_max_prev = &T_out[i_p-1].maximum()->v;
@@ -160,6 +164,7 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
         }
     }
 
+    // insert the pair (s[i_p+1],s[i_p+1]) into each avl tree T_out[i_p], with i_p in [0..p-1]
     for (int i_p=0; i_p<p; i_p++) {
         T_out[i_p].insert_or_update_in(pair_list_node<T>(interv_pair<T>{s[i_p+1],s[i_p+1]}),T_out[i_p].maximum());
     }
@@ -167,27 +172,25 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
 
 template <typename T>
 void mdsb<T>::build_dpair() {
-    /* section start positions u[0..p-1] in D_pair with 0 = u[0] < u[1] < ... < u[p] = k, for each pair
-       (p_i,q_i) in D_pair[u[j]..u[j+1]-1], s[l] <= p_i < s[l+1] holds, with i in [0..k-1], j,l in [0..p-1]
-    */
-    std::vector<T> u(p+1);
-    u[0] = 0;
+    // [0..p-1], x[i] stores the number of input intervals in I starting before s[i]
+    std::vector<T> x(p+1);
+    x[0] = 0;
     for (int i=0; i<p; i++) {
-        u[i+1] = u[i]+L_in[i].size();
+        x[i+1] = x[i]+L_in[i].size();
     }
     
-    k = u[p];
+    k = x[p];
     md->k = k;
     md->D_pair.resize(k+1);
     md->D_pair[k] = interv_pair<T>{n,n};
 
-    // Place the pairs in L_in[i_p] into D_pair[u[i_p]..u[i_p+1]-1] for each i_p in [0..p-1].
+    // Place the pairs in L_in[i_p] into D_pair[x[i_p]..x[i_p+1]-1] for each i_p in [0..p-1].
     #pragma omp parallel num_threads(p)
     {
         int i_p = omp_get_thread_num();
 
-        T l = u[i_p];
-        T r = u[i_p+1]-1;
+        T l = x[i_p];
+        T r = x[i_p+1]-1;
 
         typename pair_list<T>::dll_it it = L_in[i_p].iterator();
 
@@ -200,12 +203,25 @@ void mdsb<T>::build_dpair() {
 
 template <typename T>
 void mdsb<T>::delete_lin_tout() {
+    // disconnect the nodes in L_in[0..p-1] from the lists becuase they will get deleted when T_out[0..p-1] is deleted
+    for (int i_p=0; i_p<p; i_p++) {
+        L_in[i_p].disconnect_nodes();
+    }
+
+    // delete T_out[0..p-1]
     #pragma omp parallel num_threads(p)
     {
         int i_p = omp_get_thread_num();
 
-        L_in[i_p].disconnect_nodes();
-        T_out[i_p].delete_nodes((int) std::ceil(p*(T_out[i_p].size()/(double) k)));
+        #pragma omp single
+        {
+            #pragma omp task
+            {
+                T_out[i_p].delete_nodes((int) std::ceil(p*(T_out[i_p].size()/(double) k)));
+            }
+        }
+        
+        #pragma omp taskwait
     }
 }
 
@@ -233,8 +249,8 @@ void mdsb<T>::build_dindex() {
 }
 
 template <typename T>
-T mdsb<T>::interval_length_seq(pair_list_node<T>* nodePair) {
-    return nodePair->sc->v.first - nodePair->v.first;
+T mdsb<T>::interval_length_seq(pair_list_node<T>* pln) {
+    return pln->sc->v.first - pln->v.first;
 }
 
 template <typename T>
@@ -247,7 +263,7 @@ pair_list_node<T>* mdsb<T>::is_unbalanced_seq(pair_list_node<T>* pln_I, pair_tre
     if (r-l+1 < 2*a) return NULL;
 
     // Count the number i of input intervals connected to [l,r] in the permutation graph and stop as soon as i == a.
-    uint8_t i = 1;
+    T i = 1;
     while (i <= a && pln_I->sc->sc != NULL && pln_I->sc->v.first <= r) {
         pln_I = pln_I->sc;
         i++;
@@ -276,7 +292,7 @@ pair_list_node<T>* mdsb<T>::is_unbalanced_par(pair_list_node<T>* pln_I, pair_tre
     if (r-l+1 < 2*a) return NULL;
 
     // Count the number i of input intervals connected to [l,r] in the permutation graph and stop as soon as i == a.
-    uint8_t i = 1;
+    T i = 1;
     while (i <= a && pln_I->sc != NULL && pln_I->sc->v.first <= r) {
         pln_I = pln_I->sc;
         i++;

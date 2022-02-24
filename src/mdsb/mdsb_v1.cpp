@@ -53,7 +53,7 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
     // build T_e
     T q_i,q_next;
     avl_node<std::pair<T,T>> *node_cur;
-    uint8_t e;
+    T e;
     for (T i=0; i<k; i++) {
         // For each output interval [q_i, q_i + d_i - 1], find the first input interval connected to it in the permutation graph.
         q_i = I->at(i).second;
@@ -81,7 +81,7 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
         log_memory_usage<T>(baseline,"balancing");
     }
 
-    // balance the interval sequence
+    // balance the disjoint interval sequence
     T d,q_j,p_j,q_y,d_j,d_y;
     std::pair<T,T> pair_NEW,pair_Y;
     avl_node<std::pair<T,T>> *node_Ipb,*min,*node_NEW,*node_Y;
@@ -141,8 +141,14 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
         }
     }
     // Because T_e is empty, there are no unbalanced output intervals.
-
     md->k = k = T_in.size()-1;
+
+    if (log) {
+        time = log_runtime<T>(time);
+        log_memory_usage<T>(baseline,"deleting T_out");
+    }
+
+    T_out.delete_nodes();
 
     if (log) {
         time = log_runtime<T>(time);
@@ -156,6 +162,13 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
         md->D_pair[i] = it.current()->v;
         it.next();
     }
+
+    if (log) {
+        time = log_runtime<T>(time);
+        log_memory_usage<T>(baseline,"deleting T_in");
+    }
+
+    T_in.delete_nodes();
 
     if (log) {
         time = log_runtime<T>(time);

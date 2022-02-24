@@ -55,9 +55,10 @@ class mdsb {
     /**
      * @brief builds the move datastructure mds
      * @param mds a move datastructure that has not yet been built
-     * @param I interval sequence
+     * @param I disjoint interval sequence
      * @param n n = p_{k-1} + d_{k-1}, k <= n
-     * @param a balancing parameter, restricts size increase to the factor (1+1/(a-1)), 2 <= a
+     * @param a balancing parameter, restricts size increase to the factor
+     *          (1+1/(a-1)) and restricts move query runtime to 2a, 2 <= a
      * @param p number of threads to use
      * @param v version of the build method (1/2/3/4)
      * @param log enables log messages during build process
@@ -82,7 +83,7 @@ class mdsb {
 
     /**
      * @brief builds the move datastructure md
-     * @param I interval sequence
+     * @param I disjoint interval sequence
      * @param log enables log messages
      */
     void build_v1(interv_seq<T> *I, bool log);
@@ -91,12 +92,12 @@ class mdsb {
 
     /** 
      * @brief [0..p-1] doubly linked lists; L_in[i_p] stores the pairs (p_i,q_i) in ascending order of p_i,
-     *        where s[i_p+1] <= p_i < s[i_p+1] and i_p in [0..p-1]. L_in[0] ++ L_in[1] ++ ... ++ L_in[p-1] = I.
+     *        where s[i_p] <= p_i < s[i_p+1] and i_p in [0..p-1]. L_in[0] ++ L_in[1] ++ ... ++ L_in[p-1] = I.
      */
     std::vector<pair_list<T>> L_in;
     /**
-     * @brief [0..p-1] avl trees; T_out[i_p] stores nodes of lists in L_in, for whiches pairs (p_i,q_i)
-     *         s[i_p+1] <= q_i < s[i_p+1] holds, in ascending order of q_i, with i_p in [0..p-1].
+     * @brief [0..p-1] avl trees; T_out[i_p] stores nodes of lists in L_in in ascending order of q_i,
+     *        for each pair (p_i,q_i), s[i_p] <= q_i < s[i_p+1] holds, with i_p in [0..p-1].
      */
     std::vector<pair_tree<T>> T_out;
     /**
@@ -107,22 +108,22 @@ class mdsb {
 
     /**
      * @brief builds the move datastructure md
-     * @param I interval sequence
-     * @param v version
+     * @param I disjoint interval sequence
+     * @param v version of the build method
      * @param log enables log messages
      */
     void build_v2_v3_v4(interv_seq<T> *I, int v, bool log);
 
-    // ############################# V2/V3 SEQUENTIAL/PARALLEL #############################
+    // ############################# V2/V3/V3 SEQUENTIAL/PARALLEL #############################
 
     /**
-     * @brief builds L_in[0..p-1] and T_out[0..p-1] out of the interval sequence I
-     * @param I interval sequence
+     * @brief builds L_in[0..p-1] and T_out[0..p-1] out of the disjoint interval sequence I
+     * @param I disjoint interval sequence
      */
     void build_lin_tout(interv_seq<T> *I);
 
     /**
-     * @brief inserts the pairs in L_in into D_pair
+     * @brief inserts the pairs in L_in[0..p-1] into D_pair
      */
     void build_dpair();
 
@@ -138,14 +139,14 @@ class mdsb {
 
     /** 
      * @brief returns the length of the input/output interval starting at p_i/q_i
-     * @param nodePair pointer to the pair (p_i,q_i)
+     * @param pln (p_i,q_i)
      * @return length of the input/output interval starting at p_i/q_i
      */
-    static T interval_length_seq(pair_list_node<T>* nodePair);
+    static T interval_length_seq(pair_list_node<T>* pln);
 
     /**
-     * @brief checks if [q_j, q_j + d_j - 1] is unbalanced and returns the b+1-th input interval starting in it
-     * @param pln_I (p_i,q_i), [p_i, p_i + d_i - 1] must be the first input interval starting in [q_j, q_j + d_j - 1]
+     * @brief checks if [q_j, q_j + d_j - 1] is unbalanced and returns the a+1-th input interval starting in it
+     * @param pln_I (p_i,q_i), [p_i, p_i + d_i - 1] must be the first input interval connected to [q_j, q_j + d_j - 1] in the permutation graph
      * @param ptn_J (p_j,q_j)
      * @return (p_{i+a},q_{i+a}) if [q_j, q_j + d_j - 1] is unbalanced, else NULL
      */
@@ -154,21 +155,21 @@ class mdsb {
     // ############################# V2 SEQUENTIAL #############################
 
     /**
-     * @brief balances the interval sequence in L_in[0] and T_out[0]
+     * @brief balances the disjoint interval sequence in L_in[0] and T_out[0]
      */
     void balance_v2_seq();
 
     // ############################# V2 PARALLEL #############################
 
     /**
-     * @brief reduces T_e by inserting pairs into L_in[i_p] and Q_ins[][]
+     * @brief reduces T_e by inserting pairs into L_in[i_p] and Q_ins[0..p-1][i_p]
      * @param T_e reference to T_e
      * @param Q_ins reference to Q_ins
      */
     void reduce_te(te_tree_par<T> &T_e, ins_matr<T> &Q_ins);
 
     /**
-     * @brief balances the interval sequence in L_in[0] and T_out[0]
+     * @brief balances the disjoint interval sequence in L_in[0..p-1] and T_out[0..p-1]
      */
     void balance_v2_par();
 
@@ -177,58 +178,59 @@ class mdsb {
     /**
      * @brief balances the output interval [q_j, q_j + d_j - 1] and all unbalanced output intervals
      *        starting before or at q_u that have become unbalanced in the process
-     * @param pln_IpA (p_{i+a},q_{i+a}), [p_i, p_i + d_i - 1] must be the first input interval starting in [q_j, q_j + d_j - 1]
+     * @param pln_IpA (p_{i+a},q_{i+a}), [p_i, p_i + d_i - 1] must be the first input interval connected to [q_j, q_j + d_j - 1] in the permutation graph
      * @param ptn_J (p_j,q_j), [q_j, q_j + d_j - 1] must be the first unbalanced output interval
      * @param q_u starting position of an output interval
+     * @return the newly created pair (p_j+d,q_j+d)
      */
     inline pair_tree_node<T>* balance_upto_seq(pair_list_node<T>* pln_IpA, pair_tree_node<T>* ptn_J, T q_u);
 
     /**
-     * @brief balances the interval sequence in L_in[0] and T_out[0] sequentially
+     * @brief balances the disjoint interval sequence in L_in[0] and T_out[0] sequentially
      */
     void balance_v3_seq();
 
     // ############################# V3 PARALLEL #############################
 
     /**
-     * @brief checks if an output interval is unbalanced and returns the b+1-th input interval starting in it
-     * @param pln_I (p_i,q_i), [p_i, p_i + d_i - 1] must be the first input interval starting in [q_j, q_j + d_j - 1]
+     * @brief checks if an output interval is unbalanced and returns the a+1-th input interval starting in it
+     * @param pln_I (p_i,q_i), [p_i, p_i + d_i - 1] must be the first input interval connected to [q_j, q_j + d_j - 1] in the permutation graph
      * @param ptn_J (p_j,q_j), [q_j, q_j + d_j - 1]
-     * @param ptn_J_nxt (p_{j+1},q_{j+1})
+     * @param ptn_J_nxt (p_{j'},q_{j'}), with q_j + d_j = q_{j'}
      * @return (p_{i+a},q_{i+a}) if [q_j, q_j + d_j - 1] is unbalanced, else NULL
      */
     inline pair_list_node<T>* is_unbalanced_par(pair_list_node<T>* pln_I, pair_tree_node<T>* ptn_J, pair_tree_node<T>* ptn_J_nxt);
 
     /**
-     * @brief balances the output interval [q_j, q_j + d_j - 1] by inserting the newly created pair into T_out and Q_ins
-     * @param Q_ins insert queues
+     * @brief balances the output interval [q_j, q_j + d_j - 1] by inserting the newly created pair into T_out[i_p] and Q_ins[0..p-1][i_p]
+     * @param Q_ins reference to Q_ins
      * @param pln_IpA (p_{i+a},q_{i+a}), [p_i, p_i + d_i - 1] must be the first input interval connected to [q_j, q_j + d_j - 1] in the permutation graph
      * @param ptn_J (p_j,q_j), [q_j, q_j + d_j - 1] must be the first unbalanced output interval starting in [s[i_p]..q_u]
      * @param q_u starting position of an output interval starting in [s[i_p]..s[i_p+1]]
-     * @return the newly created pair
+     * @return the newly created pair (p_j+d,q_j+d)
      */
     inline pair_tree_node<T>* insert_pair(ins_matr<T> &Q_ins, pair_list_node<T>* pln_IpA, pair_tree_node<T>* ptn_J, T q_u);
 
     /**
-     * @brief balances the  interval sequence in L_in[0..p-1] and T_out[0..p-1] in parallel
+     * @brief balances the disjoint interval sequence in L_in[0..p-1] and T_out[0..p-1] in parallel
      */
     void balance_v3_par();
 
     // ############################# V4 PARALLEL #############################
 
     /**
-     * @brief balances the output interval [q_j, q_j + d_j - 1] by inserting the newly created pair into T_out and Q_ins
-     * @param Q_ins insert queues
+     * @brief balances the output interval [q_j, q_j + d_j - 1] by inserting the newly created pair into T_out[i_p] and Q_ins[0..p-1][i_p]
+     * @param Q_ins reference to Q_ins
      * @param D_inserted D_inserted[i] stores, whether thread i has already inserted all pairs, which the current thread has inserted into it's insert queue, into it's section
      * @param pln_IpA (p_{i+a},q_{i+a}), [p_i, p_i + d_i - 1] must be the first input interval connected to [q_j, q_j + d_j - 1] in the permutation graph
      * @param ptn_J (p_j,q_j), [q_j, q_j + d_j - 1] must be the first unbalanced output interval starting in [s[i_p]..q_u]
      * @param q_u starting position of an output interval starting in [s[i_p]..s[i_p+1]]
-     * @return the newly created pair
+     * @return the newly created pair (p_j+d,q_j+d)
      */
     inline pair_tree_node<T>* insert_pair_conc(ins_matr_conc<T> &Q_ins, std::vector<bool> &D_inserted, pair_list_node<T> *pln_IpA, pair_tree_node<T> *ptn_J, T q_u);
 
     /**
-     * @brief balances the  interval sequence in L_in[0..p-1] and T_out[0..p-1] in parallel
+     * @brief balances the disjoint interval sequence in L_in[0..p-1] and T_out[0..p-1] in parallel
      */
     void balance_v4_par();
 };

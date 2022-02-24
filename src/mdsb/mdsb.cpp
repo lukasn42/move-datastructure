@@ -18,7 +18,7 @@ extern "C" {
 #include "mdsb_v1.cpp"
 #include "mdsb_v2_par.cpp"
 #include "mdsb_v2_seq.cpp"
-#include "mdsb_v2_v3_seq_par.cpp"
+#include "mdsb_v2_v3_v4_seq_par.cpp"
 #include "mdsb_v3_par.cpp"
 #include "mdsb_v3_seq.cpp"
 #include "mdsb_v4_par.cpp"

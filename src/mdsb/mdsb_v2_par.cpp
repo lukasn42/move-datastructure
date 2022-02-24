@@ -1,4 +1,5 @@
 #include "../../include/mdsb/mdsb.hpp"
+#include "../../extern/ips4o/include/ips4o.hpp"
 
 template <typename T>
 void mdsb<T>::reduce_te(te_tree_par<T> &T_e, ins_matr<T> &Q_ins) {
@@ -46,20 +47,9 @@ void mdsb<T>::reduce_te(te_tree_par<T> &T_e, ins_matr<T> &Q_ins) {
             }
             T i_p_ = l;
 
-            // Check if [p_j + d, p_j + d_j - 1] is the new first input interval in the the i_p_-th section.
-            if (p_j >= s[i_p_]) {
-                // If it is not, insert (p_j+d,q_j+d) after (p_j,q_j) in L_in[i_p_]
-                Q_ins[i_p_][i_p].emplace(ins_pair<T>{&ptn_NEW->v,&ptn_J->v});
-            } else {
-                // Else insert (p_j+d,q_j+d) before the first pair in L_in[i_p_]
-                Q_ins[i_p_][i_p].emplace(ins_pair<T>{&ptn_NEW->v,NULL});
-            }
+            Q_ins[i_p_][i_p].emplace(ins_pair<T>{&ptn_NEW->v,&ptn_J->v});
         } else {
-            if (p_j >= s[i_p]) {
-                L_in[i_p].insert_after_node(&ptn_NEW->v,&ptn_J->v);
-            } else {
-                L_in[i_p].push_front_node(&ptn_NEW->v);
-            }
+            L_in[i_p].insert_after_node(&ptn_NEW->v,&ptn_J->v);
 
             // Check whether [q_y, q_y + d_y - 1] = [q_j + d, q_j + d_j - 1]
             if (p_j + d < q_j || q_j + d_j <= p_j + d) {
@@ -141,11 +131,8 @@ void mdsb<T>::reduce_te(te_tree_par<T> &T_e, ins_matr<T> &Q_ins) {
 
 template <typename T>
 void mdsb<T>::balance_v2_par() {
-    /**
-     * @brief [0..p-1][0..p-1] stores queues with triples (*p1,*p2,after);
-     *        Q_ins[i][j] stores the triples thread j inserts into thread i's section [s[i]..s[i+1]);
-     *        after controls whether p1 should be inseted after or before p2.
-     */
+    /** @brief [0..p-1] stores queues with tuples (*p1,*p2);
+     *        Q_ins[i] stores the tuples to insert into thread i's section [s[i]..s[i+1] */
     std::vector<std::vector<std::queue<ins_pair<T>>>> Q_ins;
     /**
      * @brief swap variable for Q_ins
@@ -162,9 +149,10 @@ void mdsb<T>::balance_v2_par() {
         int i_p = omp_get_thread_num();
 
         /*
-            contains pairs (pair_list_node<T> *p1, pair_list_node<T> *p2),
+            contains pairs (pair_list_node<T> *p1, pair_tree_node<T> *p2, pair_tree_node<T> *p3),
             where p2 is associated with an output interval with at least 2a incoming edges in the permutation graph
             and p1 is the pair associated with the a+1-st input interval in the output interval associated with p2.
+            p3 is associated with the output interval starting after the output interval associated with p2.
             The pairs are ordered by the starting position of the unbalanced output intervals associated with p2.
         */
         te_tree_par<T> T_e(
@@ -174,13 +162,13 @@ void mdsb<T>::balance_v2_par() {
         );
 
         std::vector<te_node_par<T>> *nodes_te = new std::vector<te_node_par<T>>();
-        nodes_te->reserve(k/(10*p));
+        nodes_te->reserve(L_in[i_p].size()/(2*a));
 
-        // it_inp points to to the pair (p_i,q_i).
+        // points to to the pair (p_i,q_i).
         typename pair_list<T>::dll_it it_inp = L_in[i_p].iterator();
-        // it_outp points to the pair (p_j,q_j).
+        // points to the pair (p_j,q_j).
         typename pair_tree<T>::avl_it it_outp_cur = T_out[i_p].iterator();
-        // it_outp points to the pair (p_{j+1},q_{j+1}).
+        // points to the pair (p_{j'},q_{j'}), where q_j + d_j = q_{j'}.
         typename pair_tree<T>::avl_it it_outp_nxt = T_out[i_p].iterator(T_out[i_p].second_smallest());
 
         // temporary variables
@@ -210,25 +198,28 @@ void mdsb<T>::balance_v2_par() {
         } while (!stop);
 
         if (!nodes_te->empty()) {
-            // Build T_e from nodes_te.
             T_e.insert_array(nodes_te);
-
             reduce_te(T_e,Q_ins);
-        } else {
-            delete nodes_te;
+            nodes_te = NULL;
         }
-        nodes_te = NULL;
 
         #pragma omp barrier
 
         // temporary variables
         pair_list_node<T> *pln_I,*pln_Im1,*pln_Z,*pln_ZpA;
         pair_tree_node<T> *ptn_Y,*ptn_Y_nxt;
+        //te_pair_par<T> tep_new;
+        //te_node_par<T> *ten_find;
 
         do {
             #pragma omp single
             {
                 std::swap(Q_ins,Q_ins_swap);
+            }
+
+            if (nodes_te == NULL) {
+                nodes_te = new std::vector<te_node_par<T>>();
+                nodes_te->reserve(L_in[i_p].size()/(2*a));
             }
 
             for (int i=0; i<p; i++) {
@@ -237,12 +228,7 @@ void mdsb<T>::balance_v2_par() {
                     pln_Im1 = Q_ins_swap[i_p][i].front().second;
                     Q_ins_swap[i_p][i].pop();
 
-                    // check if the new pair should be inserted at the head of the queue
-                    if (pln_Im1 != NULL) {
-                        L_in[i_p].insert_after_node(pln_I,pln_Im1);
-                    } else {
-                        L_in[i_p].push_front_node(pln_I);
-                    }
+                    L_in[i_p].insert_after_node(pln_I,pln_Im1);
 
                     // check if an output interval could have become unbalanced by inserting the new pair
                     ptn_Y = T_out[i_p].maximum_leq(pair_list_node<T>(interv_pair<T>{0,pln_I->v.first}));
@@ -258,13 +244,36 @@ void mdsb<T>::balance_v2_par() {
 
                     pln_ZpA = is_unbalanced_par(pln_Z,ptn_Y,ptn_Y_nxt);
                     if (pln_ZpA != NULL) {
-                        T_e.insert_or_update(te_pair_par<T>(pln_ZpA,ptn_Y,ptn_Y_nxt));
+                        /*
+                        if (T_e.empty()) {
+                            T_e.insert_or_update(te_pair_par<T>(pln_ZpA,ptn_Y,ptn_Y_nxt));
+                        } else {
+                            tep_new = te_pair_par<T>(pln_ZpA,ptn_Y,ptn_Y_nxt);
+                            ten_find = T_e.find(tep_new);
+                            if (ptn_Y->v.v.second == std::get<1>(ten_find->v)->v.v.second && pln_ZpA->v.first < std::get<0>(ten_find->v)->v.first) {
+                                std::get<0>(ten_find->v) = pln_ZpA;
+                            } else {
+                                T_e.insert_or_update_in(tep_new,ten_find);
+                            }
+                        }
+                        */
+                        nodes_te->push_back(te_node_par<T>(te_pair_par<T>(pln_ZpA,ptn_Y,ptn_Y_nxt)));
                     }
                 }
             }
 
+            /*
             if (!T_e.empty()) {
                 reduce_te(T_e,Q_ins);
+            }
+            */
+            if (!nodes_te->empty()) {
+                ips4o::sort(nodes_te->begin(),nodes_te->end(),[](auto n1, auto n2){return std::get<0>(n1.v)->v.first < std::get<0>(n2.v)->v.first;});
+                auto last = std::unique(nodes_te->begin(),nodes_te->end(),[](auto n1, auto n2){return std::get<1>(n1.v)->v.v.second == std::get<1>(n2.v)->v.v.second;});
+                nodes_te->erase(last,nodes_te->end());
+                T_e.insert_array(nodes_te);
+                reduce_te(T_e,Q_ins);
+                nodes_te = NULL;
             }
             
             #pragma omp barrier
