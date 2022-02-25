@@ -128,14 +128,11 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
     // build T_out[] from nodes_tout[]
     #pragma omp parallel num_threads(p)
     {
-        #pragma omp single
+        int i_p = omp_get_thread_num();
+        
+        #pragma omp task
         {
-            for (int i_p=0; i_p<p; i_p++) {
-                #pragma omp task
-                {
-                    T_out[i_p].insert_array(nodes_tout[i_p],(int) std::ceil(p*(nodes_tout[i_p]->size()/(double) k)));
-                }
-            }
+            T_out[i_p].insert_array(nodes_tout[i_p],(int) std::ceil(p*(nodes_tout[i_p]->size()/(double) k)));
         }
 
         #pragma omp taskwait
@@ -213,12 +210,9 @@ void mdsb<T>::delete_lin_tout() {
     {
         int i_p = omp_get_thread_num();
 
-        #pragma omp single
+        #pragma omp task
         {
-            #pragma omp task
-            {
-                T_out[i_p].delete_nodes((int) std::ceil(p*(T_out[i_p].size()/(double) k)));
-            }
+            T_out[i_p].delete_nodes((int) std::ceil(p*(T_out[i_p].size()/(double) k)));
         }
         
         #pragma omp taskwait

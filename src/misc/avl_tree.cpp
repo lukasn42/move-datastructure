@@ -333,7 +333,7 @@ template <typename T>
 void avl_tree<T>::insert_array(std::vector<avl_node<T>> *nds, int max_tasks) {
     if (empty() && !nds->empty()) {
         this->nds = nds;
-        this->r = make_subtree(nds,0,nds->size()-1,max_tasks);
+        this->r = make_subtree(nds,0,nds->size()-1,omp_in_parallel() ? max_tasks : 1);
         this->fst = &nds->at(0);
         this->lst = &nds->at(nds->size()-1);
         h = r->h;
@@ -366,8 +366,12 @@ bool avl_tree<T>::empty() {
 template <typename T>
 void avl_tree<T>::delete_nodes(int max_tasks) {
     if (!empty()) {
-        delete_subtree(r,max_tasks);
-        #pragma omp taskwait
+        if (omp_in_parallel()) {
+            delete_subtree(r,max_tasks);
+            #pragma omp taskwait
+        } else {
+            delete_subtree(r);
+        }
         fst = lst = r = NULL;
         h = s = 0;
         if (nds != NULL) {
