@@ -84,7 +84,7 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
     // balance the disjoint interval sequence
     T d,q_j,p_j,q_y,d_j,d_y;
     std::pair<T,T> pair_NEW,pair_Y;
-    avl_node<std::pair<T,T>> *node_Ipb,*min,*node_NEW,*node_Y;
+    avl_node<std::pair<T,T>> *node_Ipa,*min,*node_NEW,*node_Y;
     std::vector<std::tuple<T,T,std::pair<T,T>>> intervals_to_check;
     while (!T_e.empty()) {
         // Find the pair creating the first unbalanced output interval [q_j, q_j + d_j - 1] and remove it from T_e.
@@ -95,11 +95,11 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
 
         // Find the a+1-st input interval in [q_j, q_j + d_j - 1] and set d = p_{i+a} - q_j.
         // d is the smallest integer, so that [q_j, q_j + d - 1] has a incoming edges in the permutation graph.
-        node_Ipb = T_in.minimum_geq(std::make_pair(q_j,0));
+        node_Ipa = T_in.minimum_geq(std::make_pair(q_j,0));
         for (T i=0; i<a; i++) {
-            node_Ipb = node_Ipb->nxt();
+            node_Ipa = node_Ipa->nxt();
         }
-        d = node_Ipb->v.first-q_j;
+        d = node_Ipa->v.first-q_j;
 
         // Create the new pair (p_j + d, q_j + d) and insert it into T_in and T_out.
         pair_NEW = std::make_pair(p_j+d,q_j+d);

@@ -28,7 +28,7 @@ std::chrono::steady_clock::time_point log_runtime(std::chrono::steady_clock::tim
 void log_invalid_input() {
     std::cout << "invalid input, usage: a b p v file" << std::endl;
     std::cout << "    a: balancing parameter, restricts size increase to the factor (1+1/(a-1))" << std::endl;
-    std::cout << "    p: number of threads to use (1 for v=1, 1<=p<=n for 2/3, 2<=p<=n for 4)" << std::endl;
+    std::cout << "    p: number of threads to use (1 for v=1/2, 1<=p<=n for v=3, 2<=p<=n for v=4)" << std::endl;
     std::cout << "    v: build method version (1/2/3/4)" << std::endl;
 }
 
@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     if (!(
         2 <= a &&
         1 <= p && p <= omp_get_max_threads() &&
-        ((v == 1 && p == 1) || v == 2 || v == 3 || (v == 4 && 2 <= p))
+        ((v == 1 && p == 1) || (v == 2 && p == 1) || v == 3 || (v == 4 && 2 <= p))
     )) {
         log_invalid_input();
         return -1;
@@ -97,8 +97,8 @@ int main(int argc, char *argv[]) {
             rlbwt.push_back(std::make_pair(i,c));
         }
     }
-    delete T;
-    T = NULL;
+    //delete T;
+    //T = NULL;
     rlbwt.shrink_to_fit();
     uint32_t r = rlbwt.size();
     occ[c] += n-rlbwt[r-1].first;

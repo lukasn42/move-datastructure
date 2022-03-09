@@ -1,9 +1,7 @@
 #include "../../include/mdsb/mdsb.hpp"
 
 template <typename T>
-void mdsb<T>::balance_v2_seq() {
-    L_in[0].push_back_node(&T_out[0].maximum()->v);
-
+void mdsb<T>::balance_v2() {
     /* 
         contains pairs (pair_list_node<T> *p1, pair_list_node<T> *p2),
         where p2 is associated with an output interval with at least 2a incoming edges in the permutation graph
@@ -20,42 +18,45 @@ void mdsb<T>::balance_v2_seq() {
     nodes_te->reserve(k/(2*a));
 
     // points to to the pair (p_i,q_i).
-    typename pair_list<T>::dll_it it_inp = L_in[0].iterator();
-
+    pair_list_node<T> *pln_I = L_in[0].head();
     // points to the pair (p_j,q_j).
-    typename pair_tree<T>::avl_it it_outp = T_out[0].iterator();
+    typename pair_tree<T>::avl_it it_outp_cur = T_out[0].iterator();
+    // points to the pair (p_{j'},q_{j'}), where q_j + d_j = q_{j'}.
+    typename pair_tree<T>::avl_it it_outp_nxt = T_out[0].iterator(T_out[0].second_smallest());
 
-    // pointer to the pair (p_{i+2a},q_{i+2a})
+    // temporary variables
     pair_list_node<T> *pln_IpA;
+    T i_ = 1;
 
-    // At the start of each iteration, [p_i, p_i + d_i - 1] is the first input interval connected to [q_j, q_j + d_j - 1] in the permutation graph.
+    // At the start of each iteration, [p_i, p_i + d_i - 1] is the first input interval connected to [q_j, q_j + d_j - 1] in the permutation graph
     bool stop = false;
     do {
-        pln_IpA = is_unbalanced_seq(it_inp.current(),it_outp.current());
+        pln_IpA = is_unbalanced(&pln_I,&i_,it_outp_cur.current(),it_outp_nxt.current());
+        i_ = 1;
 
-        // If [q_j, q_j + d_j - 1] is unbalanced, insert ((p_{i+2a},q_{i+2a}),(p_j,q_j)) into T_e.
+        // If [q_j, q_j + d_j - 1] is unbalanced, balance it and all output intervals starting before it, that might get unbalanced in the process.
         if (pln_IpA != NULL) {
-            it_inp.set(pln_IpA);
-            nodes_te->push_back(te_node_seq<T>(te_pair_seq<T>{it_inp.current(),it_outp.current()}));
+            nodes_te->push_back(te_node_seq<T>(te_pair_seq<T>{pln_IpA,it_outp_cur.current()}));
         }
 
         // Find the next output interval with an incoming edge in the permutation graph and the first input interval connected to it.
         do {
-            if (!it_outp.has_next()) {stop = true; break;}
-            it_outp.next();
-            while (it_inp.current()->v.first < it_outp.current()->v.v.second) {
-                it_inp.next();
-                if (!it_inp.has_next()) {stop = true; break;}
+            if (!it_outp_nxt.has_next()) {stop = true; break;}
+            it_outp_cur.set(it_outp_nxt.current());
+            it_outp_nxt.next();
+            while (pln_I->v.first < it_outp_cur.current()->v.v.second) {
+                if (pln_I->sc == NULL) {stop = true; break;}
+                pln_I = pln_I->sc;
             }
-        } while (!stop && it_inp.current()->v.first >= it_outp.current()->v.v.second + interval_length_seq(&it_outp.current()->v));
+        } while (!stop && pln_I->v.first >= it_outp_nxt.current()->v.v.second);
     } while (!stop);
 
     // Build T_e from nodes_te.
-    T_e.insert_array(nodes_te);
+    T_e.insert_array(nodes_te,0,nodes_te->size()-1);
     nodes_te = NULL;
 
     // temporary variables
-    T p_j,q_j,d_j,d,q_y,steps;
+    T p_j,q_j,d_j,d,q_y;
     pair_tree_node<T> *ptn_J,*ptn_NEW,*ptn_Y;
     pair_list_node<T> *pln_Ip2A,*pln_Z,*pln_ZpA;
 
@@ -73,12 +74,13 @@ void mdsb<T>::balance_v2_seq() {
         d = pln_IpA->v.first - q_j;
 
         // Create the pair (p_j + d, q_j + d), which creates two new input intervals [p_j, p_j + d - 1] and [p_j + d, p_j + d_j - 1].
-        ptn_NEW = new pair_tree_node<T>(pair_list_node<T>(interv_pair<T>{p_j + d, q_j + d}));
+        ptn_NEW = new_nodes[0].emplace_back(pair_tree_node<T>(pair_list_node<T>(interv_pair<T>{p_j + d, q_j + d})));
         L_in[0].insert_after_node(&ptn_NEW->v,&ptn_J->v);
         T_out[0].insert_node_in(ptn_NEW,ptn_J);
 
         // Check if [q_j + d, q_j + d_j - 1] is unbalanced.
-        pln_Ip2A = is_unbalanced_seq(pln_IpA,ptn_NEW);
+        i_ = 1;
+        pln_Ip2A = is_unbalanced(&pln_IpA,&i_,ptn_NEW);
 
         pln_ZpA = NULL;
         // If p_j + d lies in [q_j, q_j + d - 1] or [q_j + d, q_j + d_j - 1], [q_j + d, q_j + d_j - 1] is the only possibly new unbalanced output interval.
@@ -102,14 +104,19 @@ void mdsb<T>::balance_v2_seq() {
                         was not, [p_z, p_z + d_z - 1] would have been found in a < 2a-1 steps, hence ((p_{x+a},q_{x+a}),(p_y,q_y)) still is a valid pair in T_e.
             */
             pln_Z = &ptn_NEW->v;
-            steps = 0;
-            while (steps < 2*a-1 && pln_Z->pr != NULL && pln_Z->pr->v.first >= q_y) {
+            i_ = 1;
+            while (i_ < 2*a && pln_Z->pr != NULL && pln_Z->pr->v.first >= q_y) {
                 pln_Z = pln_Z->pr;
-                steps++;
+                i_++;
             }
-
             if (p_j + d < q_j || pln_Z->pr == NULL || pln_Z->pr->v.first < q_y) {
-                pln_ZpA = is_unbalanced_seq(pln_Z,ptn_Y);
+                pln_Z = &ptn_NEW->v;
+                T i__ = i_;
+
+                pln_ZpA = is_unbalanced(&pln_Z,&i_,ptn_Y);
+                if (pln_ZpA != NULL && i__ > a+1 && pln_Z->sc->v.first < q_y + interval_length_seq(&ptn_Y->v)) {
+                    pln_ZpA = NULL;
+                }
             }
         }
 
@@ -125,7 +132,7 @@ void mdsb<T>::balance_v2_seq() {
                     if (T_e.size() == 1 || ptn_Y->v.v.second < T_e.second_smallest()->v.second->v.v.second) {
                         // and is the second unbalanced output interval
                         min->v = te_pair_seq<T>{pln_ZpA,ptn_Y};
-                        T_e.insert_node_in(new te_node_seq<T>(te_pair_seq<T>{pln_Ip2A,ptn_NEW}),min);
+                        T_e.insert_or_update_in(te_pair_seq<T>{pln_Ip2A,ptn_NEW},min);
                     } else {
                         // and is not the second unbalanced output interval
                         min->v = te_pair_seq<T>{pln_Ip2A,ptn_NEW};
@@ -153,6 +160,4 @@ void mdsb<T>::balance_v2_seq() {
             }
         }
     }
-
-    L_in[0].remove_node(L_in[0].tail());
 }

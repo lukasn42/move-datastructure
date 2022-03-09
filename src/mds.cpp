@@ -13,7 +13,7 @@ mds<T>::mds(std::vector<std::pair<T,T>> *I, T n, T a, int p, int v, bool log) {
     assert(0 < k && k <= n);
     assert(2 <= a);
     assert(1 <= p && p <= omp_get_max_threads() && (T) p <= n);
-    assert((v == 1 && p == 1) || v == 2 || v == 3 || (v == 4 && 2 <= p));
+    assert((v == 1 && p == 1) || (v == 2 && p == 1) || v == 3 || (v == 4 && 2 <= p));
 
     mdsb<T> mdsb(this,I,n,a,p,v,log);
 }
