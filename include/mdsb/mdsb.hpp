@@ -1,18 +1,17 @@
 #pragma once
 
-#include <mutex>
 #include <queue>
 
-#include "../../extern/concurrentqueue/concurrentqueue.h"
+#include <concurrentqueue.h>
 
-#include "../misc/avl_tree.hpp"
-#include "../../src/misc/avl_tree.cpp"
+#include <avl_tree.hpp>
+#include <avl_tree.cpp>
 
-#include "../misc/dl_list.hpp"
-#include "../../src/misc/dl_list.cpp"
+#include <dl_list.hpp>
+#include <dl_list.cpp>
 
-#include "../misc/dg_io_nc.hpp"
-#include "../../src/misc/dg_io_nc.cpp"
+#include <dg_io_nc.hpp>
+#include <dg_io_nc.cpp>
 
 template <typename T> class mds;
 
@@ -29,18 +28,21 @@ template <typename T> using pair_tree = avl_tree<pair_list_node<T>>;
 
 // ############################# V2 #############################
 
-template <typename T> using te_pair_seq = std::pair<pair_list_node<T>*,pair_tree_node<T>*>;
-template <typename T> using te_node_seq = avl_node<te_pair_seq<T>>;
-template <typename T> using te_tree_seq = avl_tree<te_pair_seq<T>>;
+template <typename T> using te_pair = std::pair<pair_list_node<T>*,pair_tree_node<T>*>;
+template <typename T> using te_node = avl_node<te_pair<T>>;
+template <typename T> using te_tree = avl_tree<te_pair<T>>;
 
 // ############################# V3/V4 PARALLEL #############################
 
 template <typename T> using ins_pair = std::pair<pair_list_node<T>*,pair_list_node<T>*>;
-template <typename T> using ins_matr = std::vector<std::vector<std::queue<ins_pair<T>>>>;
+
+// ############################# V3 PARALLEL #############################
+
+template <typename T> using ins_matr_3 = std::vector<std::vector<std::queue<ins_pair<T>>>>;
 
 // ############################# V4 PARALLEL #############################
 
-template <typename T> using ins_matr_conc = std::vector<std::vector<moodycamel::ConcurrentQueue<ins_pair<T>>>>;
+template <typename T> using ins_matr_v4 = std::vector<std::vector<moodycamel::ConcurrentQueue<ins_pair<T>>>>;
 
 /**
  * @brief builds a mds
@@ -159,7 +161,7 @@ class mdsb {
      * @param pln_IpI_ (p_{i+i_},q_{i+i_}), [p_i, p_i + d_i - 1] must be the first input interval connected to [q_j, q_j + d_j - 1] in the permutation graph
      * @param ptn_J (p_j,q_j)
      * @param ptn_J_nxt (p_{j'},q_{j'}), with q_j + d_j = q_{j'}
-     * @param i_ number of nodes pln_IpI_ is ahead of (p_i,q_i)
+     * @param i_ 1 <= i_ <= 2a
      * @return (p_{i+a},q_{i+a}) if [q_j, q_j + d_j - 1] is unbalanced, else NULL
      */
     inline pair_list_node<T>* is_unbalanced(pair_list_node<T> **pln_IpI_, T *i_, pair_tree_node<T> *ptn_J, pair_tree_node<T> *ptn_J_nxt = NULL);
@@ -203,7 +205,7 @@ class mdsb {
      * @param i_ the current input interval is the i_-th input interval in [q_j, q_j + d_j - 1]
      * @return the newly created pair (p_j+d,q_j+d)
      */
-    inline pair_tree_node<T>* balance_upto_par(ins_matr<T> &Q_ins, pair_list_node<T>* pln_IpA, pair_tree_node<T>* ptn_J, pair_tree_node<T>* ptn_J_nxt, T q_u, T p_cur, T *i_);
+    inline pair_tree_node<T>* balance_upto_par(ins_matr_3<T> &Q_ins, pair_list_node<T>* pln_IpA, pair_tree_node<T>* ptn_J, pair_tree_node<T>* ptn_J_nxt, T q_u, T p_cur, T *i_);
 
     /**
      * @brief balances the disjoint interval sequence in L_in[0..p-1] and T_out[0..p-1] in parallel
@@ -223,7 +225,7 @@ class mdsb {
      * @param i_ the current input interval is the i_-th input interval in [q_j, q_j + d_j - 1]
      * @return the newly created pair (p_j+d,q_j+d)
      */
-    inline pair_tree_node<T>* insert_pair_conc(ins_matr_conc<T> &Q_ins, pair_list_node<T> *pln_IpA, pair_tree_node<T> *ptn_J, pair_tree_node<T>* ptn_J_nxt, T q_u, T p_cur, T *i_);
+    inline pair_tree_node<T>* balance_upto_v4_par(ins_matr_v4<T> &Q_ins, pair_list_node<T> *pln_IpA, pair_tree_node<T> *ptn_J, pair_tree_node<T>* ptn_J_nxt, T q_u, T p_cur, T *i_);
 
     /**
      * @brief balances the disjoint interval sequence in L_in[0..p-1] and T_out[0..p-1] in parallel

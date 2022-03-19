@@ -1,6 +1,7 @@
 #include <cassert>
+#include <iostream>
 
-#include "../include/mds.hpp"
+#include <mds.hpp>
 
 template <typename T>
 mds<T>::mds() {}

@@ -1,8 +1,5 @@
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-
 /**
  * @brief node in a dll_list
  * @tparam T value type

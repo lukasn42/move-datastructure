@@ -1,7 +1,10 @@
 #include <vector>
 #include <omp.h>
+#include <functional>
+#include <cstddef>
+#include <cstdint>
 
-#include "../../include/misc/avl_tree.hpp"
+#include <avl_tree.hpp>
 
 template <typename T>
 avl_node<T>::avl_node() {

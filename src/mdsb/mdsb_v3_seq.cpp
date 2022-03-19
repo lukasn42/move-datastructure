@@ -1,4 +1,4 @@
-#include "../../include/mdsb/mdsb.hpp"
+#include <mdsb.hpp>
 
 template <typename T>
 pair_tree_node<T>* mdsb<T>::balance_upto_seq(pair_list_node<T> *pln_IpA, pair_tree_node<T> *ptn_J, T q_u, T p_cur, T *i_) {

@@ -1,6 +1,7 @@
 #include <cstdint>
+#include <vector>
 
-#include "../../include/misc/dg_io_nc.hpp"
+#include <dg_io_nc.hpp>
 
 template <typename T>
 dg_io_nc<T>::dg_io_nc() {

@@ -1,9 +1,5 @@
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <functional>
-
 /**
  * @brief node in an avl_tree
  * @tparam T value type

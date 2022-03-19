@@ -5,15 +5,14 @@
 #include <algorithm>
 #include <functional>
 
-#include "../../include/mdsb/mdsb.hpp"
+#include <mdsb.hpp>
 
 extern "C" {
-    #include "../../extern/malloc_count/malloc_count.h"
-    #include "../../extern/malloc_count/malloc_count.c"
+    #include <malloc_count.h>
 }
 
-#include "../../include/misc/log.hpp"
-#include "../misc/log.cpp"
+#include <log.hpp>
+#include <log.cpp>
 
 #include "mdsb_v1.cpp"
 #include "mdsb_v2.cpp"

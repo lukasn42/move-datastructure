@@ -1,6 +1,6 @@
-#include "../../extern/ips4o/include/ips4o.hpp"
+#include <ips4o.hpp>
 
-#include "../../include/mdsb/mdsb.hpp"
+#include <mdsb.hpp>
 
 template <typename T>
 void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
@@ -126,19 +126,22 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
     // build T_out[] from nodes[]
     #pragma omp parallel num_threads(p)
     {
-        int i_p = omp_get_thread_num();
-        
-        #pragma omp task
+        #pragma omp single
         {
-            T_out[i_p].insert_array(nodes,u[i_p],u[i_p+1]-1,2);
-        }
+            for (int i_p=0; i_p<p; i_p++) {
+                #pragma omp task
+                {
+                    T_out[i_p].insert_array(nodes,u[i_p],u[i_p+1]-1,2);
+                }
+            }
 
-        #pragma omp taskwait
+            #pragma omp taskwait
+        }
     }
 
     // build new_nodes[0..p-1]
     new_nodes = std::vector<dg_io_nc<pair_tree_node<T>>>(p);
-    #pragma omp parallel
+    #pragma omp parallel num_threads(p)
     {
         int i_p = omp_get_thread_num();
 
@@ -221,46 +224,37 @@ void mdsb<T>::build_dpair() {
     // Place the pairs in L_in[i_p] into D_pair[x[i_p]..x[i_p+1]-1] for each i_p in [0..p-1].
     #pragma omp parallel num_threads(p)
     {
-        int i_p = omp_get_thread_num();
-        
-        T l = x[i_p];
-        T r = x[i_p+1]-1;
-        T m = (l+r)/2;
-
-        #pragma omp task
+        #pragma omp single
         {
-            typename pair_list<T>::dll_it it = L_in[i_p].iterator();
+            for (int i_p=0; i_p<p; i_p++) {
+                
+                T l = x[i_p];
+                T r = x[i_p+1]-1;
+                T m = (l+r)/2;
 
-            for (T i=l; i<=m; i++) {
-                md->D_pair[i] = it.current()->v;
-                it.next();
+                #pragma omp task
+                {
+                    typename pair_list<T>::dll_it it = L_in[i_p].iterator();
+
+                    for (T i=l; i<=m; i++) {
+                        md->D_pair[i] = it.current()->v;
+                        it.next();
+                    }
+                }
+                #pragma omp task
+                {
+                    typename pair_list<T>::dll_it it = L_in[i_p].iterator(L_in[i_p].tail());
+
+                    for (T i=r; i>m; i--) {
+                        md->D_pair[i] = it.current()->v;
+                        it.previous();
+                    }
+                }
             }
-        }
-        #pragma omp task
-        {
-            typename pair_list<T>::dll_it it = L_in[i_p].iterator(L_in[i_p].tail());
 
-            for (T i=r; i>m; i--) {
-                md->D_pair[i] = it.current()->v;
-                it.previous();
-            }
-        }
-
-        #pragma omp taskwait
-    }
-    /*
-    #pragma omp parallel num_threads(p)
-    {
-        int i_p = omp_get_thread_num();
-
-        typename pair_list<T>::dll_it it = L_in[i_p].iterator();
-
-        for (T i=x[i_p]; i<x[i_p+1]; i++) {
-            md->D_pair[i] = it.current()->v;
-            it.next();
+            #pragma omp taskwait
         }
     }
-    */
 }
 
 template <typename T>

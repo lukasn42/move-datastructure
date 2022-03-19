@@ -1,4 +1,4 @@
-#include "../../include/mdsb/mdsb.hpp"
+#include <mdsb.hpp>
 
 template <typename T>
 void mdsb<T>::balance_v2() {
@@ -8,13 +8,13 @@ void mdsb<T>::balance_v2() {
         and p1 is the pair associated with the a+1-st input interval in the output interval associated with p2.
         The pairs are ordered by the starting position of the unbalanced output intervals associated with p2.
     */
-    te_tree_seq<T> T_e(
+    te_tree<T> T_e(
         [](auto n1, auto n2){return n1.second->v.v.second < n2.second->v.v.second;},
         [](auto n1, auto n2){return n1.second->v.v.second > n2.second->v.v.second;},
         [](auto n1, auto n2){return n1.second->v.v.second == n2.second->v.v.second;}
     );
     
-    std::vector<te_node_seq<T>> *nodes_te = new std::vector<te_node_seq<T>>();
+    std::vector<te_node<T>> *nodes_te = new std::vector<te_node<T>>();
     nodes_te->reserve(k/(2*a));
 
     // points to to the pair (p_i,q_i).
@@ -36,7 +36,7 @@ void mdsb<T>::balance_v2() {
 
         // If [q_j, q_j + d_j - 1] is unbalanced, balance it and all output intervals starting before it, that might get unbalanced in the process.
         if (pln_IpA != NULL) {
-            nodes_te->push_back(te_node_seq<T>(te_pair_seq<T>{pln_IpA,it_outp_cur.current()}));
+            nodes_te->push_back(te_node<T>(te_pair<T>{pln_IpA,it_outp_cur.current()}));
         }
 
         // Find the next output interval with an incoming edge in the permutation graph and the first input interval connected to it.
@@ -62,7 +62,7 @@ void mdsb<T>::balance_v2() {
 
     while (!T_e.empty()) {
         // Find the first unbalanced output interval and the a+1-st input interval connected to it in the permutation graph.
-        te_node_seq<T> *min = T_e.minimum();
+        te_node<T> *min = T_e.minimum();
         pln_IpA = min->v.first;
         ptn_J = min->v.second;
 
@@ -125,35 +125,35 @@ void mdsb<T>::balance_v2() {
                 // If [q_j + d, q_j + d_j - 1] and [q_y, q_y + d_y - 1] are both new unbalanced output intervals
                 if (pln_ZpA->v.first < pln_Ip2A->v.first) {
                     // and [q_y, q_y + d_y - 1] lies before [q_j + d, q_j + d_j - 1]
-                    min->v = te_pair_seq<T>{pln_Ip2A,ptn_NEW};
-                    T_e.insert_or_update_in(te_pair_seq<T>{pln_ZpA,ptn_Y},min);
+                    min->v = te_pair<T>{pln_Ip2A,ptn_NEW};
+                    T_e.insert_or_update_in(te_pair<T>{pln_ZpA,ptn_Y},min);
                 } else {
                     // and [q_y, q_y + d_y - 1] lies after [q_j + d, q_j + d_j - 1]
                     if (T_e.size() == 1 || ptn_Y->v.v.second < T_e.second_smallest()->v.second->v.v.second) {
                         // and is the second unbalanced output interval
-                        min->v = te_pair_seq<T>{pln_ZpA,ptn_Y};
-                        T_e.insert_or_update_in(te_pair_seq<T>{pln_Ip2A,ptn_NEW},min);
+                        min->v = te_pair<T>{pln_ZpA,ptn_Y};
+                        T_e.insert_or_update_in(te_pair<T>{pln_Ip2A,ptn_NEW},min);
                     } else {
                         // and is not the second unbalanced output interval
-                        min->v = te_pair_seq<T>{pln_Ip2A,ptn_NEW};
-                        T_e.insert_or_update(te_pair_seq<T>{pln_ZpA,ptn_Y});
+                        min->v = te_pair<T>{pln_Ip2A,ptn_NEW};
+                        T_e.insert_or_update(te_pair<T>{pln_ZpA,ptn_Y});
                     }
                 }
             } else {
                 // If [q_y, q_y + d_y - 1] is the only new unbalanced output interval
                 if (T_e.size() == 1 || ptn_Y->v.v.second < T_e.second_smallest()->v.second->v.v.second) {
                     // and is the first unbalanced output interval
-                    min->v = te_pair_seq<T>{pln_ZpA,ptn_Y};
+                    min->v = te_pair<T>{pln_ZpA,ptn_Y};
                 } else {
                     // and is not the first unbalanced output interval
                     T_e.remove_node(min);
-                    T_e.insert_or_update(te_pair_seq<T>{pln_ZpA,ptn_Y});
+                    T_e.insert_or_update(te_pair<T>{pln_ZpA,ptn_Y});
                 }
             }
         } else {
             if (pln_Ip2A != NULL) {
                 // If [q_j + d, q_j + d_j - 1] is the only new unbalanced output interval
-                min->v = te_pair_seq<T>{pln_Ip2A,ptn_NEW};
+                min->v = te_pair<T>{pln_Ip2A,ptn_NEW};
             } else {
                 // If there is no new unbalanced output interval
                 T_e.remove_node(min);

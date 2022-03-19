@@ -1,7 +1,7 @@
-#include "../../include/mdsb/mdsb.hpp"
+#include <mdsb.hpp>
 
 template <typename T>
-pair_tree_node<T>* mdsb<T>::insert_pair_conc(ins_matr_conc<T> &Q_ins, pair_list_node<T> *pln_IpA, pair_tree_node<T> *ptn_J, pair_tree_node<T>* ptn_J_nxt, T q_u, T p_cur, T *i_) {
+pair_tree_node<T>* mdsb<T>::balance_upto_v4_par(ins_matr_v4<T> &Q_ins, pair_list_node<T> *pln_IpA, pair_tree_node<T> *ptn_J, pair_tree_node<T>* ptn_J_nxt, T q_u, T p_cur, T *i_) {
     int i_p = omp_get_thread_num();
 
     T p_j = ptn_J->v.v.first;
@@ -54,7 +54,7 @@ pair_tree_node<T>* mdsb<T>::insert_pair_conc(ins_matr_conc<T> &Q_ins, pair_list_
 
                 pair_list_node<T> *pln_ZpA = is_unbalanced(&pln_Z,&i__,ptn_Y,ptn_Y_nxt);
                 if (pln_ZpA != NULL) {
-                    insert_pair_conc(Q_ins,pln_ZpA,ptn_Y,ptn_Y_nxt,q_u,p_cur,i_);
+                    balance_upto_v4_par(Q_ins,pln_ZpA,ptn_Y,ptn_Y_nxt,q_u,p_cur,i_);
                 }
             }
         } else if (p_j + d < p_cur) {
@@ -68,9 +68,9 @@ template <typename T>
 void mdsb<T>::balance_v4_par() {
     /** @brief [0..p-1] stores queues with tuples (*p1,*p2);
      *        Q_ins[i] stores the tuples to insert into thread i's section [s[i]..s[i+1] */
-    ins_matr_conc<T> Q_ins(p);
+    ins_matr_v4<T> Q_ins(p);
 
-    /** @brief [0..p-1] D_done[i] stores, whether thread i is done */
+    /** @brief [0..p-1] D_done[i] stores whether thread i is done */
     bool D_done[p];
 
     for (int i=0; i<p; i++) {
@@ -100,7 +100,7 @@ void mdsb<T>::balance_v4_par() {
 
             // If [q_j, q_j + d_j - 1] is unbalanced, balance it and all output intervals starting before it, that might get unbalanced in the process.
             if (pln_IpA != NULL) {
-                it_outp_cur.set(insert_pair_conc(Q_ins,pln_IpA,it_outp_cur.current(),it_outp_nxt.current(),it_outp_cur.current()->v.v.second,pln_I->v.first,&i_));
+                it_outp_cur.set(balance_upto_v4_par(Q_ins,pln_IpA,it_outp_cur.current(),it_outp_nxt.current(),it_outp_cur.current()->v.v.second,pln_I->v.first,&i_));
                 continue;
             }
 
@@ -160,7 +160,7 @@ void mdsb<T>::balance_v4_par() {
 
                     pln_ZpA = is_unbalanced(&pln_Z,&i_,ptn_Y,ptn_Y_nxt);
                     if (pln_ZpA != NULL) {
-                        insert_pair_conc(Q_ins,pln_ZpA,ptn_Y,ptn_Y_nxt,s[i_p+1],s[i_p+1],&i_);
+                        balance_upto_v4_par(Q_ins,pln_ZpA,ptn_Y,ptn_Y_nxt,s[i_p+1],s[i_p+1],&i_);
                     }
                 }
             }
@@ -173,7 +173,7 @@ void mdsb<T>::balance_v4_par() {
                     }
                 }
 
-                if (done_this && !D_done[i_p]) {
+                if (!D_done[i_p]) {
                     D_done[i_p] = true;
                 }
             }

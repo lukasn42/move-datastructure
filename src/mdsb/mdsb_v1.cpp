@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "../../include/mdsb/mdsb.hpp"
+#include <mdsb.hpp>
 
 template <typename T>
 void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {

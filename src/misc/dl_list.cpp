@@ -1,6 +1,8 @@
 #include <utility>
+#include <cstddef>
+#include <cstdint>
 
-#include "../../include/misc/dl_list.hpp"
+#include <dl_list.hpp>
 
 template <typename T>
 dll_node<T>::dll_node() {
@@ -26,9 +28,7 @@ dl_list<T>::dl_list() {
 
 template <typename T>
 dl_list<T>::~dl_list() {
-    if (!empty()) {
-        delete_nodes();
-    }
+    delete_nodes();
 }
 
 template <typename T>

@@ -1,7 +1,7 @@
-#include "../../include/mdsb/mdsb.hpp"
+#include <mdsb.hpp>
 
 template <typename T>
-pair_tree_node<T>* mdsb<T>::balance_upto_par(ins_matr<T> &Q_ins, pair_list_node<T> *pln_IpA, pair_tree_node<T> *ptn_J, pair_tree_node<T>* ptn_J_nxt, T q_u, T p_cur, T *i_) {
+pair_tree_node<T>* mdsb<T>::balance_upto_par(ins_matr_3<T> &Q_ins, pair_list_node<T> *pln_IpA, pair_tree_node<T> *ptn_J, pair_tree_node<T>* ptn_J_nxt, T q_u, T p_cur, T *i_) {
     int i_p = omp_get_thread_num();
 
     T p_j = ptn_J->v.v.first;
@@ -12,7 +12,6 @@ pair_tree_node<T>* mdsb<T>::balance_upto_par(ins_matr<T> &Q_ins, pair_list_node<
     T d = pln_IpA->v.first - q_j;
 
     // Create the pair (p_j + d, q_j + d), which creates two new input intervals [p_j, p_j + d - 1] and [p_j + d, p_j + d_j - 1].
-
     pair_tree_node<T> *ptn_NEW = new_nodes[i_p].emplace_back(pair_tree_node<T>(pair_list_node<T>(interv_pair<T>{p_j + d, q_j + d})));
     T_out[i_p].insert_node_in(ptn_NEW,ptn_J);
 
@@ -69,12 +68,12 @@ template <typename T>
 void mdsb<T>::balance_v3_par() {
     /** @brief [0..p-1] stores queues with tuples (*p1,*p2);
      *        Q_ins[i] stores the tuples to insert into thread i's section [s[i]..s[i+1] */
-    ins_matr<T> Q_ins;
+    ins_matr_3<T> Q_ins;
     /** @brief swap variable for Q_ins */
-    ins_matr<T> Q_ins_swap;
+    ins_matr_3<T> Q_ins_swap;
 
-    Q_ins = ins_matr<T>(p,std::vector<std::queue<ins_pair<T>>>(p));
-    Q_ins_swap = ins_matr<T>(p,std::vector<std::queue<ins_pair<T>>>(p));
+    Q_ins = ins_matr_3<T>(p,std::vector<std::queue<ins_pair<T>>>(p));
+    Q_ins_swap = ins_matr_3<T>(p,std::vector<std::queue<ins_pair<T>>>(p));
 
     std::vector<bool> done_thr(p,true);
     bool done;

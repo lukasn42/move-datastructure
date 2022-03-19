@@ -1,10 +1,11 @@
 #include <iostream>
+#include <chrono>
 
 extern "C" {
-    #include "../../extern/malloc_count/malloc_count.h"
+    #include <malloc_count.h>
 }
 
-#include "../../include/misc/log.hpp"
+#include <log.hpp>
 
 template <typename T>
 std::chrono::steady_clock::time_point log_runtime(std::chrono::steady_clock::time_point time) {

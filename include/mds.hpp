@@ -1,10 +1,7 @@
 #pragma once
 
-#include <cstdint>
-#include <vector>
-
-#include "mdsb/mdsb.hpp"
-#include "../src/mdsb/mdsb.cpp"
+#include <mdsb.hpp>
+#include <mdsb.cpp>
 
 /**
  * @brief stores a bijective function f_I : [0..n-1] -> [0..n-1] as a balanced disjoint interval sequence B_I[0..k]
