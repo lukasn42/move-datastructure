@@ -28,7 +28,7 @@ include_directories(
     src/ src/mdsb/ src/misc/ test/
     include/ include/mdsb/ include/misc/
 )
-add_library(mds STATIC src/mds.cpp src/mdsb/mdsb.cpp src/misc/avl_tree.cpp src/misc/dl_list.cpp src/misc/dg_io_nc.cpp src/misc/log.cpp test/test.cpp)
+add_library(mds STATIC src/mds.cpp src/mdsb/mdsb.cpp src/misc/avl_tree.cpp src/misc/dl_list.cpp src/misc/dg_io_nc.cpp src/misc/log.cpp)
 target_link_libraries(mds dl OpenMP::OpenMP_CXX ips4o malloc_count)
 
 # move datastructure test
