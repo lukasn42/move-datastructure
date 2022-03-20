@@ -33,8 +33,9 @@ class mds {
      * @param p (optional) number of threads to use (default: all threads)
      * @param v version of the build method (1/2/3/4) (default: 3)
      * @param log enables log messages during build process (default: false)
+     * @param os output stream to write runtime and space usage to if log is enabled (default: NULL)
      */
-    mds<T>(std::vector<std::pair<T,T>> *I, T n, T a = 2, int p = omp_get_max_threads(), int v = 3, bool log = false);
+    mds<T>(std::vector<std::pair<T,T>> *I, T n, T a = 2, int p = omp_get_max_threads(), int v = 3, bool log = false, std::ostream *os = NULL);
 
     /**
      * @brief deletes the move datastructure

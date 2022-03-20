@@ -255,15 +255,14 @@ void mdsb<T>::build_dpair() {
             #pragma omp taskwait
         }
     }
-}
 
-template <typename T>
-void mdsb<T>::delete_lin_tout() {
     for (int i=0; i<p; i++) {
         L_in[i].disconnect_nodes();
         T_out[i].disconnect_nodes();
     }
+
     new_nodes.clear();
+    
     delete nodes;
     nodes = NULL;
 }

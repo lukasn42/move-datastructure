@@ -3,7 +3,7 @@
 #include <mdsb.hpp>
 
 template <typename T>
-void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
+void mdsb<T>::build_v1(interv_seq<T> *I, bool log, std::ostream *os) {
     size_t baseline;
     std::chrono::steady_clock::time_point time;
 
@@ -14,7 +14,7 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
         std::cout << std::endl;
     }
 
-    if (log) log_memory_usage<T>(baseline,"building T_in and T_out");
+    if (log) log_memory_usage(baseline,"building T_in and T_out");
 
     // stores the pairs in I sorted by p_i
     avl_tree<std::pair<T,T>> T_in(
@@ -46,8 +46,11 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
     }
 
     if (log) {
-        time = log_runtime<T>(time);
-        log_memory_usage<T>(baseline,"building T_e");
+        if (os != NULL) {
+            *os << " phase_1=" << time_diff(time);
+        }
+        time = log_runtime(time);
+        log_memory_usage(baseline,"building T_e");
     }
 
     // build T_e
@@ -77,8 +80,8 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
     }
 
     if (log) {
-        time = log_runtime<T>(time);
-        log_memory_usage<T>(baseline,"balancing");
+        time = log_runtime(time);
+        log_memory_usage(baseline,"balancing");
     }
 
     // balance the disjoint interval sequence
@@ -144,15 +147,18 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
     md->k = k = T_in.size()-1;
 
     if (log) {
-        time = log_runtime<T>(time);
-        log_memory_usage<T>(baseline,"deleting T_out");
+        if (os != NULL) {
+            *os << " phase_2=" << time_diff(time);
+        }
+        time = log_runtime(time);
+        log_memory_usage(baseline,"deleting T_out");
     }
 
     T_out.delete_nodes();
 
     if (log) {
-        time = log_runtime<T>(time);
-        log_memory_usage<T>(baseline,"building D_pair");
+        time = log_runtime(time);
+        log_memory_usage(baseline,"building D_pair");
     }
     
     // build D_pair
@@ -164,15 +170,18 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
     }
 
     if (log) {
-        time = log_runtime<T>(time);
-        log_memory_usage<T>(baseline,"deleting T_in");
+        time = log_runtime(time);
+        log_memory_usage(baseline,"deleting T_in");
     }
 
     T_in.delete_nodes();
 
     if (log) {
-        time = log_runtime<T>(time);
-        log_memory_usage<T>(baseline,"building D_index");
+        if (os != NULL) {
+            *os << " phase_3=" << time_diff(time);
+        }
+        time = log_runtime(time);
+        log_memory_usage(baseline,"building D_index");
     }
 
     // build D_index
@@ -195,8 +204,14 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log) {
     }
 
     if (log) {
-        time = log_runtime<T>(time);
-        log_memory_usage<T>(baseline,"move datastructure built");
+        if (os != NULL) {
+            *os << " phase_4=" << time_diff(time);
+        }
+        time = log_runtime(time);
+        if (os != NULL) {
+            *os << " memory_usage=" << (malloc_count_peak()-baseline)/1000000;
+        }
+        log_memory_usage(baseline,"move datastructure built");
     }
 
     if (log) std::cout << std::endl << "peak memory allocation during build: ~ " << (malloc_count_peak()-baseline)/1000000 << "MB" << std::endl << std::endl;

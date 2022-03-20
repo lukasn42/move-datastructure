@@ -22,7 +22,7 @@ extern "C" {
 #include "mdsb_v4_par.cpp"
 
 template <typename T>
-mdsb<T>::mdsb(mds<T> *md, interv_seq<T> *I, T n, T a, int p, int v, bool log) {
+mdsb<T>::mdsb(mds<T> *md, interv_seq<T> *I, T n, T a, int p, int v, bool log, std::ostream *os) {
     this->md = md;
     this->n = n;
     this->k = I->size();
@@ -32,9 +32,9 @@ mdsb<T>::mdsb(mds<T> *md, interv_seq<T> *I, T n, T a, int p, int v, bool log) {
     omp_set_num_threads(p);
 
     if (v == 1) {
-        build_v1(I,log);
+        build_v1(I,log,os);
     } else {
-        build_v2_v3_v4(I,v,log);
+        build_v2_v3_v4(I,v,log,os);
     }
 
     #ifndef NDEBUG
@@ -48,7 +48,7 @@ mdsb<T>::~mdsb() {
 }
 
 template <typename T>
-void mdsb<T>::build_v2_v3_v4(interv_seq<T> *I, int v, bool log) {
+void mdsb<T>::build_v2_v3_v4(interv_seq<T> *I, int v, bool log, std::ostream *os) {
     size_t baseline;
     std::chrono::steady_clock::time_point time;
 
@@ -59,13 +59,16 @@ void mdsb<T>::build_v2_v3_v4(interv_seq<T> *I, int v, bool log) {
         std::cout << std::endl;
     }
 
-    if (log) log_memory_usage<T>(baseline,"building L_in and T_out");
+    if (log) log_memory_usage(baseline,"building L_in and T_out");
 
     build_lin_tout(I);
     
     if (log) {
-        time = log_runtime<T>(time);
-        log_memory_usage<T>(baseline,"balancing");
+        if (os != NULL) {
+            *os << " phase_1=" << time_diff(time);
+        }
+        time = log_runtime(time);
+        log_memory_usage(baseline,"balancing");
     }
 
     if (p > 1) {
@@ -83,29 +86,34 @@ void mdsb<T>::build_v2_v3_v4(interv_seq<T> *I, int v, bool log) {
     }
 
     if (log) {
-        time = log_runtime<T>(time);
-        log_memory_usage<T>(baseline,"building D_pair");
+        if (os != NULL) {
+            *os << " phase_2=" << time_diff(time);
+        }
+        time = log_runtime(time);
+        log_memory_usage(baseline,"building D_pair");
     }
     
     build_dpair();
 
     if (log) {
-        time = log_runtime<T>(time);
-        log_memory_usage<T>(baseline,"deleteing L_in and T_out");
-    }
-
-    delete_lin_tout();
-
-    if (log) {
-        time = log_runtime<T>(time);
-        log_memory_usage<T>(baseline,"building D_index");
+        if (os != NULL) {
+            *os << " phase_3=" << time_diff(time);
+        }
+        time = log_runtime(time);
+        log_memory_usage(baseline,"building D_index");
     }
 
     build_dindex();
 
     if (log) {
-        time = log_runtime<T>(time);
-        log_memory_usage<T>(baseline,"move datastructure built");
+        if (os != NULL) {
+            *os << " phase_4=" << time_diff(time);
+        }
+        time = log_runtime(time);
+        if (os != NULL) {
+            *os << " memory_usage=" << (malloc_count_peak()-baseline)/1000000;
+        }
+        log_memory_usage(baseline,"move datastructure built");
     }
 
     if (log) std::cout << std::endl << "peak memory allocation during build: ~ " << (malloc_count_peak()-baseline)/1000000 << "MB" << std::endl << std::endl;
