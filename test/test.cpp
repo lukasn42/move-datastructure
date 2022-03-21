@@ -42,11 +42,12 @@ std::string to_string_with_precision(const T a_value, const int n = 6)
 }
 
 void log_invalid_input() {
-    std::cout << "invalid input, usage: a p v text_file_name m" << std::endl;
+    std::cout << "invalid input, usage: a p v t (m)" << std::endl;
     std::cout << "    a: balancing parameter, restricts size increase to the factor (1+1/(a-1))" << std::endl;
     std::cout << "    p: number of threads to use (1 for v=1/2, 1<=p<=n for v=3, 2<=p<=n for v=4)" << std::endl;
     std::cout << "    v: build method version (1/2/3/4)" << std::endl;
-    std::cout << "    m: writes runtime and memory usage measurements to a file" << std::endl;
+    std::cout << "    t: text file" << std::endl;
+    std::cout << "    m: (optional) writes runtime and memory usage measurements to a file" << std::endl;
 }
 
 template<typename INT_T>

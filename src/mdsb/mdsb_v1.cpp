@@ -148,8 +148,6 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log, std::ostream *os) {
         time = log_runtime(time);
         log_memory_usage(baseline,"building D_pair");
     }
-
-    
     
     // build D_pair
     md->D_pair.resize(k+1);
@@ -198,7 +196,4 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log, std::ostream *os) {
     }
 
     if (log) std::cout << std::endl << "peak memory allocation during build: ~ " << (malloc_count_peak()-baseline)/1000000 << "MB" << std::endl << std::endl;
-
-    T_out.delete_nodes();
-    T_in.delete_nodes();
 }
