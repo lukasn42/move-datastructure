@@ -11,6 +11,7 @@
 #include <omp.h>
 #include <limits>
 #include <sstream>
+#include <filesystem>
 
 #include <ips4o.hpp>
 
@@ -41,15 +42,15 @@ std::string to_string_with_precision(const T a_value, const int n = 6)
 }
 
 void log_invalid_input() {
-    std::cout << "invalid input, usage: a b p v file" << std::endl;
+    std::cout << "invalid input, usage: a p v text_file_name m" << std::endl;
     std::cout << "    a: balancing parameter, restricts size increase to the factor (1+1/(a-1))" << std::endl;
     std::cout << "    p: number of threads to use (1 for v=1/2, 1<=p<=n for v=3, 2<=p<=n for v=4)" << std::endl;
     std::cout << "    v: build method version (1/2/3/4)" << std::endl;
+    std::cout << "    m: writes runtime and memory usage measurements to a file" << std::endl;
 }
 
 template<typename INT_T>
-void test(std::string &T, INT_T n, int a, int p, int v, std::chrono::steady_clock::time_point time) {
-    // calculate SA
+void test(std::string &T, INT_T n, int a, int p, int v, std::chrono::steady_clock::time_point time, std::string text_file_name, std::ofstream *measurement_file = NULL) {
     std::vector<INT_T>SA(n);
     if (std::is_same<INT_T,uint32_t>::value) {
         if (p > 1) {
@@ -113,8 +114,17 @@ void test(std::string &T, INT_T n, int a, int p, int v, std::chrono::steady_cloc
         r = I_LF->size();
         time = log_runtime(time,"I_LF calculated in");
 
-        M_LF = mds<INT_T>(I_LF,n,a,p,v,true);
-        time = log_runtime(time,"M_LF (" + to_string_with_precision(std::ceil(M_LF.intervals()/(double) r * 1000.0)/1000.0,3) + ") calculated in");
+
+        if (measurement_file != NULL) {
+            *measurement_file << "RESULT text=" << text_file_name << " type=M_LF" << " a=" << a << " p=" << p << " v=" << v;
+        }
+        M_LF = mds<INT_T>(I_LF,n,a,p,v,true,measurement_file);
+
+        std::string growth_factor = to_string_with_precision(std::ceil(M_LF.intervals()/(double) r * 1000.0)/1000.0,3);
+        if (measurement_file != NULL) {
+            *measurement_file << " growth_factor=" << growth_factor << std::endl;
+        }
+        time = log_runtime(time,"M_LF (" + growth_factor + ") calculated in");
         r = M_LF.intervals();
     }
 
@@ -133,13 +143,21 @@ void test(std::string &T, INT_T n, int a, int p, int v, std::chrono::steady_cloc
         }
         time = log_runtime(time,"I_phi' calculated in");
 
-        M_phi = mds<INT_T>(I_phi,n,a,p,v,true);
-        time = log_runtime(time,"M_phi (" + to_string_with_precision(std::ceil(M_phi.intervals()/(double) r * 1000.0)/1000.0,3) + ") calculated in");
+        if (measurement_file != NULL) {
+            *measurement_file << "RESULT text=" << text_file_name << " type=M_phi" << " a=" << a << " p=" << p << " v=" << v;
+        }
+        M_phi = mds<INT_T>(I_phi,n,a,p,v,true,measurement_file);
+        
+        std::string growth_factor = to_string_with_precision(std::ceil(M_phi.intervals()/(double) r * 1000.0)/1000.0,3);
+        if (measurement_file != NULL) {
+            *measurement_file << " growth_factor=" << growth_factor << std::endl;
+        }
+        time = log_runtime(time,"M_phi (" + growth_factor + ") calculated in");
     }
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 5) {
+    if (argc < 5 || 6 < argc) {
         log_invalid_input();
         return -1;
     }
@@ -147,8 +165,16 @@ int main(int argc, char *argv[]) {
     int a = atoi(argv[1]);
     int p = atoi(argv[2]);
     int v = atoi(argv[3]);
+    std::string text_file_name = argv[4];
+    bool measure = argc == 6;
+    std::ofstream measurement_file;
+
+    if (measure) {
+        measurement_file.open(argv[5],std::filesystem::exists(argv[5]) ? std::ios::app : std::ios::out);
+    }
 
     if (!(
+        (!measure || measurement_file.good()) &&
         2 <= a &&
         1 <= p && p <= omp_get_max_threads() &&
         ((v == 1 && p == 1) || (v == 2 && p == 1) || v == 3 || (v == 4 && 2 <= p))
@@ -160,8 +186,8 @@ int main(int argc, char *argv[]) {
     omp_set_num_threads(p);
     std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now();
 
-    // read file into T
-    std::ifstream file(argv[4]);
+    std::ifstream file(text_file_name);
+    text_file_name = text_file_name.substr(text_file_name.find_last_of("/\\") + 1);
     if (!file.good()) {
         std::cout << "invalid input: could not read textfile" << std::endl;
         return -1;
@@ -180,10 +206,14 @@ int main(int argc, char *argv[]) {
     T[n-1] = 1;
     time = log_runtime(time,"file read");
 
-    if (n <= INT_MAX) {
-        test<uint32_t>(T,n,a,p,v,time);
+    if (n <= UINT_MAX) {
+        test<uint32_t>(T,n,a,p,v,time,text_file_name,(measure ? &measurement_file : NULL));
     } else {
-        test<uint64_t>(T,n,a,p,v,time);
+        test<uint64_t>(T,n,a,p,v,time,text_file_name,(measure ? &measurement_file : NULL));
+    }
+
+    if (measure) {
+        measurement_file.close();
     }
 
     return 0;

@@ -61,8 +61,9 @@ class mdsb {
      * @param p number of threads to use
      * @param v version of the build method (1/2/3/4)
      * @param log enables log messages during build process
+     * @param os output stream to write runtime and space usage to if log is enabled (default: NULL)
      */
-    mdsb<T>(mds<T> *mds, interv_seq<T> *I, T n, T a, int p, int v, bool log);
+    mdsb<T>(mds<T> *mds, interv_seq<T> *I, T n, T a, int p, int v, bool log, std::ostream *os = NULL);
 
     /**
      * @brief deletes the mdsb
@@ -89,8 +90,9 @@ class mdsb {
      * @brief builds the move datastructure md
      * @param I disjoint interval sequence
      * @param log enables log messages
+     * @param os output stream to write runtime and space usage to if log is enabled (default: NULL)
      */
-    void build_v1(interv_seq<T> *I, bool log);
+    void build_v1(interv_seq<T> *I, bool log, std::ostream *os = NULL);
 
     // ############################# V2/V3/V4 #############################
 
@@ -123,8 +125,9 @@ class mdsb {
      * @param I disjoint interval sequence
      * @param v version of the build method
      * @param log enables log messages
+     * @param os output stream to write runtime and space usage to if log is enabled (default: NULL)
      */
-    void build_v2_v3_v4(interv_seq<T> *I, int v, bool log);
+    void build_v2_v3_v4(interv_seq<T> *I, int v, bool log, std::ostream *os = NULL);
 
     // ############################# V2/V3/V4 SEQUENTIAL/PARALLEL #############################
 
@@ -138,11 +141,6 @@ class mdsb {
      * @brief inserts the pairs in L_in[0..p-1] into D_pair
      */
     void build_dpair();
-
-    /**
-     * @brief deletes L_in and T_out
-     */
-    void delete_lin_tout();
 
     /**
      * @brief builds D_index

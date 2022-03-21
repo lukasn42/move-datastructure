@@ -7,7 +7,7 @@ template <typename T>
 mds<T>::mds() {}
 
 template <typename T>
-mds<T>::mds(std::vector<std::pair<T,T>> *I, T n, T a, int p, int v, bool log) {
+mds<T>::mds(std::vector<std::pair<T,T>> *I, T n, T a, int p, int v, bool log, std::ostream *os) {
     this->n = n;
     this->k = I->size();
     
@@ -16,7 +16,7 @@ mds<T>::mds(std::vector<std::pair<T,T>> *I, T n, T a, int p, int v, bool log) {
     assert(1 <= p && p <= omp_get_max_threads() && (T) p <= n);
     assert((v == 1 && p == 1) || (v == 2 && p == 1) || v == 3 || (v == 4 && 2 <= p));
 
-    mdsb<T> mdsb(this,I,n,a,p,v,log);
+    mdsb<T> mdsb(this,I,n,a,p,v,log,os);
 }
 
 template <typename T>
