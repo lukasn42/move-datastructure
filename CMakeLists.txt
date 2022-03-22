@@ -7,7 +7,6 @@ project(mds LANGUAGES C CXX)
 find_package(OpenMP)
 
 # ips4o
-include_directories(extern/ips4o)
 add_subdirectory(extern/ips4o)
 
 # concurrentqueue

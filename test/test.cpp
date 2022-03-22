@@ -28,7 +28,7 @@ extern "C" {
 #include <mds.cpp>
 
 std::chrono::steady_clock::time_point log_runtime(std::chrono::steady_clock::time_point time, std::string message) {
-    std::cout << message << " in " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-time).count() << " ms" << std::endl;
+    std::cout << message << " in " << time_diff(time) << " ms" << std::endl;
     return std::chrono::steady_clock::now();
 }
 
@@ -53,7 +53,7 @@ void log_invalid_input() {
 template<typename INT_T>
 void test(std::string &T, INT_T n, int a, int p, int v, std::chrono::steady_clock::time_point time, std::string text_file_name, std::ofstream *measurement_file = NULL) {
     std::vector<INT_T>SA(n);
-    if (std::is_same<INT_T,uint32_t>::value) {
+    if (std::is_same<INT_T,int32_t>::value) {
         if (p > 1) {
             libsais_omp((uint8_t*)&T[0],(int32_t*)&SA[0],(int32_t)n,0,NULL,p);
         } else {
@@ -115,7 +115,6 @@ void test(std::string &T, INT_T n, int a, int p, int v, std::chrono::steady_cloc
         r = I_LF->size();
         time = log_runtime(time,"I_LF calculated in");
 
-
         if (measurement_file != NULL) {
             *measurement_file << "RESULT text=" << text_file_name << " type=M_LF" << " a=" << a << " p=" << p << " v=" << v;
         }
@@ -123,7 +122,7 @@ void test(std::string &T, INT_T n, int a, int p, int v, std::chrono::steady_cloc
 
         std::string growth_factor = to_string_with_precision(std::ceil(M_LF.intervals()/(double) r * 1000.0)/1000.0,3);
         if (measurement_file != NULL) {
-            *measurement_file << " growth_factor=" << growth_factor << std::endl;
+            *measurement_file << " time_tot=" << time_diff(time) << " growth_factor=" << growth_factor << std::endl;
         }
         time = log_runtime(time,"M_LF (" + growth_factor + ") calculated in");
         r = M_LF.intervals();
@@ -151,7 +150,7 @@ void test(std::string &T, INT_T n, int a, int p, int v, std::chrono::steady_cloc
         
         std::string growth_factor = to_string_with_precision(std::ceil(M_phi.intervals()/(double) r * 1000.0)/1000.0,3);
         if (measurement_file != NULL) {
-            *measurement_file << " growth_factor=" << growth_factor << std::endl;
+            *measurement_file << " time_tot=" << time_diff(time) << " growth_factor=" << growth_factor << std::endl;
         }
         time = log_runtime(time,"M_phi (" + growth_factor + ") calculated in");
     }
@@ -194,23 +193,30 @@ int main(int argc, char *argv[]) {
         return -1;
     }
     file.seekg(0,std::ios::end);
-    uint64_t n = file.tellg()+(std::streamsize)+1;
-    if (n < (uint64_t) p) {
+    int64_t n = file.tellg()+(std::streamsize)+1;
+    file.seekg(0,std::ios::beg);
+    if (n < (int64_t) p) {
         std::cout << "invalid input: n < p" << std::endl;
         return -1;
     }
-    file.seekg(0,std::ios::beg);
     std::string T;
-    T.resize(n);
-    file.read((char*)&T[0],n-1);
+    if (n <= INT_MAX) {
+        T.resize(n);
+        file.read((char*)&T[0],n-1);
+    } else {
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        T.reserve(n);
+        T = buffer.str();
+    }
     file.close();
     T[n-1] = 1;
     time = log_runtime(time,"file read");
 
-    if (n <= UINT_MAX) {
-        test<uint32_t>(T,n,a,p,v,time,text_file_name,(measure ? &measurement_file : NULL));
+    if (n <= INT_MAX) {
+        test<int32_t>(T,n,a,p,v,time,text_file_name,(measure ? &measurement_file : NULL));
     } else {
-        test<uint64_t>(T,n,a,p,v,time,text_file_name,(measure ? &measurement_file : NULL));
+        test<int64_t>(T,n,a,p,v,time,text_file_name,(measure ? &measurement_file : NULL));
     }
 
     if (measure) {
