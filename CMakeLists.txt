@@ -33,7 +33,7 @@ target_link_libraries(mds dl OpenMP::OpenMP_CXX ips4o malloc_count)
 # move datastructure test
 add_executable(mds_test test/test.cpp)
 target_link_libraries(mds_test dl OpenMP::OpenMP_CXX ips4o malloc_count libsais mds)
-target_compile_options(mds_test PUBLIC -Ofast -DNDEBUG -fstrict-aliasing -funroll-loops -finline-functions -march=native)
+target_compile_options(mds_test PUBLIC -Ofast -DNDEBUG -fstrict-aliasing -ftree-vectorize -funroll-loops -finline-functions -march=native)
 
 add_executable(mds_test_debug test/test.cpp)
 target_link_libraries(mds_test_debug dl OpenMP::OpenMP_CXX ips4o malloc_count libsais mds)

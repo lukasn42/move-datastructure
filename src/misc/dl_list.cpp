@@ -42,13 +42,28 @@ uint64_t dl_list<T>::size() {
 }
 
 template <typename T>
+void dl_list<T>::set_size(uint64_t s) {
+    this->s = s;
+}
+
+template <typename T>
 dll_node<T>* dl_list<T>::head() {
     return hd;
 }
 
 template <typename T>
+void dl_list<T>::set_head(dll_node<T> *n) {
+    this->hd = n;
+}
+
+template <typename T>
 dll_node<T>* dl_list<T>::tail() {
     return tl;
+}
+
+template <typename T>
+void dl_list<T>::set_tail(dll_node<T> *n) {
+    this->tl = n;
 }
 
 template <typename T>

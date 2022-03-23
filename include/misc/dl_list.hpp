@@ -56,9 +56,15 @@ class dl_list {
 
     /**
      * @brief returns the number of nodes in the dl_list
-     * @return uint64_t number of nodes in the dl_list
+     * @return number of nodes in the dl_list
      */
     uint64_t size();
+
+    /**
+     * @brief adjusts the size of the dl_list
+     * @param s new size
+     */
+    void set_size(uint64_t s);
 
     /**
      * @brief returns the head of the dl_list
@@ -67,10 +73,22 @@ class dl_list {
     dll_node<T>* head();
 
     /**
+     * @brief adjusts the head of the dl_list
+     * @param n new head
+     */
+    void set_head(dll_node<T> *n);
+
+    /**
      * @brief returns the tail of the dl_list
      * @return the tail of the dl_list
      */
     dll_node<T>* tail();
+
+    /**
+     * @brief adjusts the head of the dl_list
+     * @param n new tail
+     */
+    void set_tail(dll_node<T> *n);
 
     /**
      * @brief inserts a node with value v before the head of the dl_list

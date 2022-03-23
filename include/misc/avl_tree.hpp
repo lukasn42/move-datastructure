@@ -137,7 +137,7 @@ class avl_tree {
      * @param max_tasks maximum number of tasks to start
      * @return the root of the avl subtree
      */
-    inline avl_node<T>* build_subtree(std::vector<avl_node<T>> *nds, int l, int r, int max_tasks = 1);
+    inline avl_node<T>* build_subtree(std::vector<avl_node<T>> *nds, int l, int r, int max_tasks = 1, std::function<int(int)> at = [](int i){return i;});
 
     /**
      * @brief deletes the avl_node n
@@ -206,7 +206,7 @@ class avl_tree {
      * @param r r in [0..|nds|-1], l <= r
      * @param max_tasks maximum number of tasks to start
      */
-    void insert_array(std::vector<avl_node<T>> *nds, int l, int r, int max_tasks = 1);
+    void insert_array(std::vector<avl_node<T>> *nds, int l, int r, int max_tasks = 1, std::function<int(int)> at = [](int i){return i;});
 
     /**
      * @brief returns the node with the smallest value in the avl_tree

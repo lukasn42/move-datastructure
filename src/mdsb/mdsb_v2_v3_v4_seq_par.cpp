@@ -45,6 +45,7 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
             ips4o::sort(pi.begin(),pi.end(),comp);
         }
 
+        // calculate seperation positions
         #pragma omp parallel
         {
             int i_p = omp_get_thread_num();
@@ -96,46 +97,44 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
             s[i_p] = l_s;
         }
 
-        // calculate pi^{-1}
-        std::vector<T> pi_m1(k);
-        #pragma omp parallel for num_threads(p)
-        for (T i=0; i<k; i++) {
-            pi_m1[pi[i]] = i;
-        }
-
         // stores the nodes to build L_in[0..p-1] and T_out[0..p-1] out of
         nodes = new std::vector<pair_tree_node<T>>(k);
 
         // insert pairs into nodes and build L_in[0..p-1]
+        nodes->at(0).v.v = I->at(0);
+        #pragma omp parallel for num_threads(p)
+        for (T i=1; i<k; i++) {
+            nodes->at(i).v.v = I->at(i);
+            nodes->at(i).v.pr = &nodes->at(i-1).v;
+            nodes->at(i-1).v.sc = &nodes->at(i).v;
+        }
+
+        for (int i=0; i<p; i++) {
+            L_in[i].set_head(&nodes->at(x[i]).v);
+            L_in[i].set_tail(&nodes->at(x[i+1]-1).v);
+            L_in[i].set_size(x[i+1]-x[i]);
+        }
+        for (int i=1; i<p; i++) {
+            L_in[i-1].tail()->sc = NULL;
+            L_in[i].head()->pr = NULL;
+        }
+
+        delete I;
+
+        // build T_out[0..p-1] from nodes[0..k-1]
         #pragma omp parallel num_threads(p)
         {
-            int i_p = omp_get_thread_num();
-
-            for (T i=x[i_p]; i<x[i_p+1]; i++) {
-                L_in[i_p].push_back_node(&nodes->at(pi_m1[i]).v);
-            }
-
-            for (T i=u[i_p]; i<u[i_p+1]; i++) {
-                nodes->at(i).v.v = I->at(pi[i]);
-            }
-        }
-    }
-    
-    delete I;
-
-    // build T_out[] from nodes[]
-    #pragma omp parallel num_threads(p)
-    {
-        #pragma omp single
-        {
-            for (int i_p=0; i_p<p; i_p++) {
-                #pragma omp task
-                {
-                    T_out[i_p].insert_array(nodes,u[i_p],u[i_p+1]-1,2);
+            #pragma omp single
+            {
+                for (int i_p=0; i_p<p; i_p++) {
+                    #pragma omp task
+                    {
+                        T_out[i_p].insert_array(nodes,u[i_p],u[i_p+1]-1,2,[&pi](int i){return pi[i];});
+                    }
                 }
-            }
 
-            #pragma omp taskwait
+                #pragma omp taskwait
+            }
         }
     }
 

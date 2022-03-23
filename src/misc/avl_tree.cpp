@@ -256,31 +256,34 @@ void avl_tree<T>::remove_node_in(avl_node<T> *n_rem, avl_node<T> *n) {
 }
 
 template <typename T>
-avl_node<T>* avl_tree<T>::build_subtree(std::vector<avl_node<T>> *nds, int l, int r, int max_tasks) {
+avl_node<T>* avl_tree<T>::build_subtree(std::vector<avl_node<T>> *nds, int l, int r, int max_tasks, std::function<int(int)> at) {
     if (r == l) {
-        return &nds->at(l);
+        return &nds->at(at(l));
     } else if (r == l+1) {
-        nds->at(r).lc = &nds->at(l);
-        nds->at(l).p = &nds->at(r);
-        nds->at(r).h = 1;
-        return &nds->at(r);
+        int l_ = at(l);
+        int r_ = at(r);
+        nds->at(r_).lc = &nds->at(l_);
+        nds->at(l_).p = &nds->at(r_);
+        nds->at(r_).h = 1;
+        return &nds->at(r_);
     } else {
         int m = (l+r)/2;
+        int m_ = at(m);
         if (max_tasks > 1) {
             #pragma omp task
             {
-                nds->at(m).lc = build_subtree(nds,l,m-1,max_tasks/2);
+                nds->at(m_).lc = build_subtree(nds,l,m-1,max_tasks/2,at);
             }
-            nds->at(m).rc = build_subtree(nds,m+1,r,max_tasks/2);
+            nds->at(m_).rc = build_subtree(nds,m+1,r,max_tasks/2,at);
             #pragma omp taskwait
         } else {
-            nds->at(m).lc = build_subtree(nds,l,m-1);
-            nds->at(m).rc = build_subtree(nds,m+1,r);
+            nds->at(m_).lc = build_subtree(nds,l,m-1,1,at);
+            nds->at(m_).rc = build_subtree(nds,m+1,r,1,at);
         }
-        nds->at(m).lc->p = &nds->at(m);
-        nds->at(m).rc->p = &nds->at(m);
-        update_height(&nds->at(m));
-        return &nds->at(m);
+        nds->at(m_).lc->p = &nds->at(m_);
+        nds->at(m_).rc->p = &nds->at(m_);
+        update_height(&nds->at(m_));
+        return &nds->at(m_);
     }
 }
 
@@ -328,12 +331,12 @@ avl_tree<T>::avl_tree(
 }
 
 template <typename T>
-void avl_tree<T>::insert_array(std::vector<avl_node<T>> *nds, int l, int r, int max_tasks) {
+void avl_tree<T>::insert_array(std::vector<avl_node<T>> *nds, int l, int r, int max_tasks, std::function<int(int)> at) {
     if (empty() && !nds->empty() && l >= 0 && r >= l && (size_t) r < nds->size()) {
         this->nds = nds;
-        this->r = build_subtree(nds,l,r,omp_in_parallel() ? max_tasks : 1);
-        this->fst = &nds->at(l);
-        this->lst = &nds->at(r);
+        this->r = build_subtree(nds,l,r,omp_in_parallel() ? max_tasks : 1,at);
+        this->fst = &nds->at(at(l));
+        this->lst = &nds->at(at(r));
         h = this->r->h;
         s = r-l+1;
     }
