@@ -2,6 +2,8 @@
 
 #include <mdsb.hpp>
 
+#include <log.hpp>
+
 template <typename T>
 void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
     L_in = std::vector<pair_list<T>>(p);
@@ -97,31 +99,69 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
             s[i_p] = l_s;
         }
 
+        // std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now();
         // stores the nodes to build L_in[0..p-1] and T_out[0..p-1] out of
-        nodes = new std::vector<pair_tree_node<T>>(k);
+        nodes = std::vector<std::vector<pair_tree_node<T>>*>(p);
+        T k_p = 1+(k-1)/p;
+        #pragma omp parallel num_threads(p)
+        {
+            int i_p = omp_get_thread_num();
 
-        // insert pairs into nodes and build L_in[0..p-1]
-        nodes->at(0).v.v = I->at(0);
-        #pragma omp parallel for num_threads(p)
-        for (T i=1; i<k; i++) {
-            nodes->at(i).v.v = I->at(i);
-            nodes->at(i).v.pr = &nodes->at(i-1).v;
-            nodes->at(i-1).v.sc = &nodes->at(i).v;
-        }
+            T l = i_p*k_p;
+            T r = i_p == p-1 ? k : (i_p+1)*k_p;
 
-        for (int i=0; i<p; i++) {
-            L_in[i].set_head(&nodes->at(x[i]).v);
-            L_in[i].set_tail(&nodes->at(x[i+1]-1).v);
-            L_in[i].set_size(x[i+1]-x[i]);
-        }
-        for (int i=1; i<p; i++) {
-            L_in[i-1].tail()->sc = NULL;
-            L_in[i].head()->pr = NULL;
+            /*
+            #pragma omp single
+            {
+                time = std::chrono::steady_clock::now();
+            }
+            */
+
+            // allocate nodes
+            nodes[i_p] = new std::vector<pair_tree_node<T>>(r-l);
+
+            /*
+            #pragma omp single
+            {
+                time = log_runtime(time);
+            }
+            */
+
+            // insert pairs into nodes and build L_in[0..p-1]
+            T i_m = r-l;
+            T i_I = l;
+            for (T i=1; i<i_m; i++) {
+                i_I++;
+                nodes[i_p]->at(i).v.v = I->at(i_I);
+                nodes[i_p]->at(i).v.pr = &nodes[i_p]->at(i-1).v;
+                nodes[i_p]->at(i-1).v.sc = &nodes[i_p]->at(i).v;
+            }
+            T i_n = x[i_p]/k_p;
+            L_in[i_p].set_head(&nodes[i_n]->at(x[i_p]-i_n*k_p).v);
+            i_n = (x[i_p+1]-1)/k_p;
+            L_in[i_p].set_tail(&nodes[i_n]->at((x[i_p+1]-1)-i_n*k_p).v);
+            L_in[i_p].set_size(x[i_p+1]-x[i_p]);
+
+            #pragma omp barrier
+
+            nodes[i_p]->at(0).v.v = I->at(i_p*k_p);
+            if (i_p != 0) {
+                nodes[i_p]->at(0).v.pr = &nodes[i_p-1]->at(k_p-1).v;
+                nodes[i_p-1]->at(k_p-1).v.sc = &nodes[i_p]->at(0).v;
+            }
+            if (i_p != 0) {
+                L_in[i_p-1].tail()->sc = NULL;
+                L_in[i_p].head()->pr = NULL;
+            }
         }
 
         delete I;
 
         // build T_out[0..p-1] from nodes[0..k-1]
+        std::function<pair_tree_node<T>*(int)> at = [&k_p,&pi,this](int i){
+            int i_n = pi[i]/k_p;
+            return &nodes[i_n]->at(pi[i]-(i_n*k_p));
+        };
         #pragma omp parallel num_threads(p)
         {
             #pragma omp single
@@ -129,7 +169,7 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
                 for (int i_p=0; i_p<p; i_p++) {
                     #pragma omp task
                     {
-                        T_out[i_p].insert_array(nodes,u[i_p],u[i_p+1]-1,2,[&pi](int i){return pi[i];});
+                        T_out[i_p].insert_array(u[i_p],u[i_p+1]-1,at,2);
                     }
                 }
 
@@ -261,9 +301,10 @@ void mdsb<T>::build_dpair() {
     }
 
     new_nodes.clear();
-    
-    delete nodes;
-    nodes = NULL;
+    for (int i=0; i<p; i++) {
+        delete nodes[i];
+    }
+    nodes.clear();
 }
 
 template <typename T>

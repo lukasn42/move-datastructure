@@ -53,8 +53,6 @@ class avl_tree {
     uint64_t s; // size
     uint8_t h; // height
 
-    std::vector<avl_node<T>> *nds; // array of nodes that have been inserted whith insert_array()
-
     std::function<bool(T&,T&)> lt; // comparison function "less than" on values of type T
     std::function<bool(T&,T&)> gt; // comparison function "greater than" on values of type T
     std::function<bool(T&,T&)> eq; // comparison function "equals" on values of type T
@@ -130,27 +128,20 @@ class avl_tree {
     inline void remove_node_in(avl_node<T> *nr, avl_node<T> *n);
 
     /**
-     * @brief creates a balanced avl subtree of the nodes in nds[l..r] and returns it's root node
-     * @param nds array of avl_nodes, must be sorted according to the comparison operators
+     * @brief creates a balanced avl subtree of the nodes in at(l),at(l+1),...,at(r) and returns it's root node
      * @param l l in [0..|nds|-1]
      * @param r r in [0..|nds|-1], l <= r
+     * @param at function returning the node at a given position
      * @param max_tasks maximum number of tasks to start
      * @return the root of the avl subtree
      */
-    inline avl_node<T>* build_subtree(std::vector<avl_node<T>> *nds, int l, int r, int max_tasks = 1, std::function<int(int)> at = [](int i){return i;});
-
-    /**
-     * @brief deletes the avl_node n
-     * @param n an avl_node in the avl_tree
-     */
-    inline void delete_node(avl_node<T> *n);
+    inline avl_node<T>* build_subtree(int l, int r, std::function<avl_node<T>*(int)> &at, int max_tasks = 1);
 
     /**
      * @brief recursively deletes all nodes in the subtree of node n
      * @param n an avl_node
-     * @param max_tasks maximum number of tasks to start
      */
-    inline void delete_subtree(avl_node<T> *n, int max_tasks = 1);
+    inline void delete_subtree(avl_node<T> *n);
 
     public:
     /**
@@ -166,7 +157,7 @@ class avl_tree {
     );
 
     /**
-     * @brief deletes the avl_tree and all of it's nodes
+     * @brief deletes the avl_tree but not it's nodes
      */
     ~avl_tree<T>();
 
@@ -190,9 +181,8 @@ class avl_tree {
 
     /**
      * @brief deletes all nodes in the avl_tree
-     * @param max_tasks maximum number of tasks to start
      */
-    void delete_nodes(int max_tasks = 1);
+    void delete_nodes();
 
     /**
      * @brief disconnects all nodes in the avl_tree
@@ -200,13 +190,13 @@ class avl_tree {
     void disconnect_nodes();
 
     /**
-     * @brief inserts the nodes[l..r] in nds into the avl_tree if it is empty
-     * @param nds sorted array of avl_nodes
+     * @brief inserts the nodes in at(l),at(l+1),...,at(r) into the avl_tree if it is empty
      * @param l l in [0..|nds|-1]
      * @param r r in [0..|nds|-1], l <= r
+     * @param at function returning the node at a given position
      * @param max_tasks maximum number of tasks to start
      */
-    void insert_array(std::vector<avl_node<T>> *nds, int l, int r, int max_tasks = 1, std::function<int(int)> at = [](int i){return i;});
+    void insert_array(int l, int r, std::function<avl_node<T>*(int)> &at, int max_tasks = 1);
 
     /**
      * @brief returns the node with the smallest value in the avl_tree
@@ -284,22 +274,23 @@ class avl_tree {
     /**
      * @brief removes node n from the avl_tree
      * @param n an avl_node in the avl_tree
+     * @return the node that has been removed
      */
-    void remove_node(avl_node<T> *n);
+    avl_node<T>* remove_node(avl_node<T> *n);
+
+    /**
+     * @brief removes the node with a value equal to v from the avl_tree
+     * @param v value
+     * @return the node that has been removed if it was in the avl_tree
+     */
+    avl_node<T>* remove(T &&v);
 
     /**
      * @brief removes the node with a value equal to v from the avl_tree
      * @param v value
      * @return whether there was a node with a value equal to v in the avl_tree
      */
-    bool remove(T &&v);
-
-    /**
-     * @brief removes the node with a value equal to v from the avl_tree
-     * @param v value
-     * @return whether there was a node with a value equal to v in the avl_tree
-     */
-    bool remove(T &v);
+    avl_node<T>* remove(T &v);
 
     /**
      * @brief searches for a node with value v in the avl_tree until it was found or a leaf has been reached

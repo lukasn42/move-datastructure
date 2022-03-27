@@ -52,8 +52,8 @@ void mdsb<T>::balance_v2() {
     } while (!stop);
 
     // Build T_e from nodes_te.
-    T_e.insert_array(nodes_te,0,nodes_te->size()-1);
-    nodes_te = NULL;
+    std::function<te_node<T>*(int)> at = [nodes_te](int i){return &nodes_te->at(i);};
+    T_e.insert_array(0,nodes_te->size()-1,at);
 
     // temporary variables
     T p_j,q_j,d_j,d,q_y;
@@ -147,6 +147,9 @@ void mdsb<T>::balance_v2() {
                 } else {
                     // and is not the first unbalanced output interval
                     T_e.remove_node(min);
+                    if (min < &nodes_te->front() || &nodes_te->back() < min) {
+                        delete min;
+                    }
                     T_e.insert_or_update(te_pair<T>{pln_ZpA,ptn_Y});
                 }
             }
@@ -157,6 +160,9 @@ void mdsb<T>::balance_v2() {
             } else {
                 // If there is no new unbalanced output interval
                 T_e.remove_node(min);
+                if (min < &nodes_te->front() || &nodes_te->back() < min) {
+                    delete min;
+                }
             }
         }
     }

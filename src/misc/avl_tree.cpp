@@ -201,7 +201,6 @@ void avl_tree<T>::remove_node_in(avl_node<T> *n_rem, avl_node<T> *n) {
             }
             n_rem->rc = NULL;
         }
-        delete_node(n_rem);
     } else if (n_rem->rc == NULL) {
         s--;
         if (n_rem->p != NULL) {
@@ -216,7 +215,6 @@ void avl_tree<T>::remove_node_in(avl_node<T> *n_rem, avl_node<T> *n) {
             r = n_rem->lc;
         }
         n_rem->lc = NULL;
-        delete_node(n_rem);
     } else {
         avl_node<T> *min = minimum(n_rem->rc);
         avl_node<T> n_tmp = *min;
@@ -256,64 +254,48 @@ void avl_tree<T>::remove_node_in(avl_node<T> *n_rem, avl_node<T> *n) {
 }
 
 template <typename T>
-avl_node<T>* avl_tree<T>::build_subtree(std::vector<avl_node<T>> *nds, int l, int r, int max_tasks, std::function<int(int)> at) {
+avl_node<T>* avl_tree<T>::build_subtree(int l, int r, std::function<avl_node<T>*(int)> &at, int max_tasks) {
     if (r == l) {
-        return &nds->at(at(l));
+        return at(l);
     } else if (r == l+1) {
-        int l_ = at(l);
-        int r_ = at(r);
-        nds->at(r_).lc = &nds->at(l_);
-        nds->at(l_).p = &nds->at(r_);
-        nds->at(r_).h = 1;
-        return &nds->at(r_);
+        avl_node<T>* n_l = at(l);
+        avl_node<T>* n_r = at(r);
+        n_r->lc = n_l;
+        n_l->p = n_r;
+        n_r->h = 1;
+        return n_r;
     } else {
         int m = (l+r)/2;
-        int m_ = at(m);
+        avl_node<T>* n_m = at(m);
         if (max_tasks > 1) {
             #pragma omp task
             {
-                nds->at(m_).lc = build_subtree(nds,l,m-1,max_tasks/2,at);
+                n_m->lc = build_subtree(l,m-1,at,max_tasks/2);
             }
-            nds->at(m_).rc = build_subtree(nds,m+1,r,max_tasks/2,at);
+            n_m->rc = build_subtree(m+1,r,at,max_tasks/2);
             #pragma omp taskwait
         } else {
-            nds->at(m_).lc = build_subtree(nds,l,m-1,1,at);
-            nds->at(m_).rc = build_subtree(nds,m+1,r,1,at);
+            n_m->lc = build_subtree(l,m-1,at,1);
+            n_m->rc = build_subtree(m+1,r,at,1);
         }
-        nds->at(m_).lc->p = &nds->at(m_);
-        nds->at(m_).rc->p = &nds->at(m_);
-        update_height(&nds->at(m_));
-        return &nds->at(m_);
+        n_m->lc->p = n_m;
+        n_m->rc->p = n_m;
+        update_height(n_m);
+        return n_m;
     }
 }
 
 template <typename T>
-void avl_tree<T>::delete_node(avl_node<T> *n) {
-    if (nds == NULL || n < &nds->front() || &nds->back() < n) {
-        delete n;
+void avl_tree<T>::delete_subtree(avl_node<T> *n) {
+    if (n->lc != NULL) {
+        delete_subtree(n->lc);
     }
-}
-
-template <typename T>
-void avl_tree<T>::delete_subtree(avl_node<T> *n, int max_tasks) {
-    if (max_tasks > 1 && n->lc != NULL && n->rc != NULL) {
-        #pragma omp task
-        {
-            delete_subtree(n->lc,max_tasks/2);
-        }
-        delete_subtree(n->rc,max_tasks/2);
-        #pragma omp taskwait
-    } else {
-        if (n->lc != NULL) {
-            delete_subtree(n->lc);
-        }
-        if (n->rc != NULL) {
-            delete_subtree(n->rc);
-        }
+    if (n->rc != NULL) {
+        delete_subtree(n->rc);
     }
     n->p = NULL;
     n->h = 0;
-    delete_node(n);
+    delete n;
 }
 
 template <typename T>
@@ -327,16 +309,14 @@ avl_tree<T>::avl_tree(
     this->eq = eq;
     fst = lst = r = NULL;
     h = s = 0;
-    nds = NULL;
 }
 
 template <typename T>
-void avl_tree<T>::insert_array(std::vector<avl_node<T>> *nds, int l, int r, int max_tasks, std::function<int(int)> at) {
-    if (empty() && !nds->empty() && l >= 0 && r >= l && (size_t) r < nds->size()) {
-        this->nds = nds;
-        this->r = build_subtree(nds,l,r,omp_in_parallel() ? max_tasks : 1,at);
-        this->fst = &nds->at(at(l));
-        this->lst = &nds->at(at(r));
+void avl_tree<T>::insert_array(int l, int r, std::function<avl_node<T>*(int)> &at, int max_tasks) {
+    if (empty() && l >= 0 && r >= l) {
+        this->r = build_subtree(l,r,at,omp_in_parallel() ? max_tasks : 1);
+        this->fst = at(l);
+        this->lst = at(r);
         h = this->r->h;
         s = r-l+1;
     }
@@ -344,9 +324,8 @@ void avl_tree<T>::insert_array(std::vector<avl_node<T>> *nds, int l, int r, int 
 
 template <typename T>
 avl_tree<T>::~avl_tree() {
-    if (!empty()) {
-        delete_nodes();
-    }
+    fst = lst = r = NULL;
+    h = s = 0;
 }
 
 template <typename T>
@@ -365,18 +344,11 @@ bool avl_tree<T>::empty() {
 }
 
 template <typename T>
-void avl_tree<T>::delete_nodes(int max_tasks) {
+void avl_tree<T>::delete_nodes() {
     if (!empty()) {
-        if (omp_in_parallel()) {
-            delete_subtree(r,max_tasks);
-        } else {
-            delete_subtree(r);
-        }
+        delete_subtree(r);
         fst = lst = r = NULL;
         h = s = 0;
-        if (nds != NULL) {
-            nds = NULL;
-        }
     }
 }
 
@@ -384,7 +356,6 @@ template <typename T>
 void avl_tree<T>::disconnect_nodes() {
     fst = lst = r = NULL;
     h = s = 0;
-    nds = NULL;
 }
 
 template <typename T>
@@ -543,14 +514,10 @@ avl_node<T>* avl_tree<T>::insert_node(avl_node<T> *n) {
 }
 
 template <typename T>
-void avl_tree<T>::remove_node(avl_node<T> *n) {
+avl_node<T>* avl_tree<T>::remove_node(avl_node<T> *n) {
     if (s == 1) {
-        delete_node(n);
         r = fst = lst = NULL;
         h = s = 0;
-        if (nds != NULL) {
-            nds = NULL;
-        }
     } else {
         if (n == fst) {
             fst = second_smallest();
@@ -560,18 +527,18 @@ void avl_tree<T>::remove_node(avl_node<T> *n) {
         remove_node_in(n,r);
         h = r->h;
     }
+    return n;
 }
 
 template <typename T>
-bool avl_tree<T>::remove(T &&v) {
+avl_node<T>* avl_tree<T>::remove(T &&v) {
     avl_node<T> *n = find(v);
-    if (n == NULL || !eq(n->v,v)) return false;
-    remove_node(n);
-    return true;
+    if (n == NULL || !eq(n->v,v)) return NULL;
+    return remove_node(n);
 }
 
 template <typename T>
-bool avl_tree<T>::remove(T &v) {
+avl_node<T>* avl_tree<T>::remove(T &v) {
     return remove(std::move(v));
 }
 

@@ -3,6 +3,10 @@ set(CMAKE_CXX_STANDARD 20)
 
 project(mds LANGUAGES C CXX)
 
+find_package(TBB REQUIRED)
+
+
+
 # openmp
 find_package(OpenMP)
 
@@ -28,13 +32,13 @@ include_directories(
     include/ include/mdsb/ include/misc/
 )
 add_library(mds STATIC src/mds.cpp src/mdsb/mdsb.cpp src/misc/avl_tree.cpp src/misc/dl_list.cpp src/misc/dg_io_nc.cpp src/misc/log.cpp)
-target_link_libraries(mds dl OpenMP::OpenMP_CXX ips4o malloc_count)
+target_link_libraries(mds dl OpenMP::OpenMP_CXX TBB::tbb ips4o malloc_count)
 
 # move datastructure test
 add_executable(mds_test test/test.cpp)
-target_link_libraries(mds_test dl OpenMP::OpenMP_CXX ips4o malloc_count libsais mds)
-target_compile_options(mds_test PUBLIC -Ofast -DNDEBUG -fstrict-aliasing -ftree-vectorize -funroll-loops -finline-functions -march=native)
+target_link_libraries(mds_test dl OpenMP::OpenMP_CXX TBB::tbb ips4o malloc_count libsais mds)
+target_compile_options(mds_test PUBLIC -L$TBBROOT/lib/intel64/gcc4.8 -ltbbmalloc_proxy -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -Ofast -DNDEBUG -fstrict-aliasing -ftree-vectorize -funroll-loops -finline-functions -march=native)
 
 add_executable(mds_test_debug test/test.cpp)
-target_link_libraries(mds_test_debug dl OpenMP::OpenMP_CXX ips4o malloc_count libsais mds)
+target_link_libraries(mds_test_debug dl OpenMP::OpenMP_CXX TBB::tbb ips4o malloc_count libsais mds)
 target_compile_options(mds_test_debug PUBLIC -ggdb3 -Wall -Wextra -march=native -fstrict-aliasing)

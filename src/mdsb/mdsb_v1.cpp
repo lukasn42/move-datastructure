@@ -89,7 +89,7 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log, std::ostream *os) {
         min = T_e.minimum();
         p_j = min->v.first;
         q_j = min->v.second;
-        T_e.remove(min->v);
+        delete T_e.remove(min->v);
 
         // Find the a+1-st input interval in [q_j, q_j + d_j - 1] and set d = p_{i+a} - q_j.
         // d is the smallest integer, so that [q_j, q_j + d - 1] has a incoming edges in the permutation graph.
@@ -156,6 +156,8 @@ void mdsb<T>::build_v1(interv_seq<T> *I, bool log, std::ostream *os) {
         md->D_pair[i] = it.current()->v;
         it.next();
     }
+    T_in.delete_nodes();
+    T_out.delete_nodes();
 
     if (log) {
         if (os != NULL) {

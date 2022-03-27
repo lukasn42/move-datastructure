@@ -114,7 +114,7 @@ class mdsb {
     /**
      * @brief stores the nodes in L_in[0..p-1] and T_out[0..p-1] that they were initially created with
      */
-    std::vector<pair_tree_node<T>> *nodes;
+    std::vector<std::vector<pair_tree_node<T>>*> nodes;
     /**
      * @brief [0..p-1] new_nodes[i_p] stores the newly created nodes in L_in[0..p-1] and T_out[0..p-1], that were created by thread i_p.
      */

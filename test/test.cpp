@@ -91,7 +91,7 @@ void test(std::string &T, INT_T n, int a, int p, int v, std::chrono::steady_cloc
     time = log_runtime(time,"C calculated in");
 
     mds<INT_T> M_LF,M_phi;
-    INT_T r;
+    INT_T r,r_;
 
     {
         std::vector<std::pair<INT_T,INT_T>> *I_LF = new std::vector<std::pair<INT_T,INT_T>>();
@@ -113,26 +113,27 @@ void test(std::string &T, INT_T n, int a, int p, int v, std::chrono::steady_cloc
         I_LF->shrink_to_fit();
         C.clear();
         r = I_LF->size();
-        time = log_runtime(time,"I_LF calculated in");
+        std::string growth_factor = to_string_with_precision(std::ceil(n/(double)r * 1000.0)/1000.0,3);
+        time = log_runtime(time,"I_LF (n/r = " + growth_factor + ") calculated in");
 
         if (measurement_file != NULL) {
             *measurement_file << "RESULT text=" << text_file_name << " type=M_LF" << " a=" << a << " p=" << p << " v=" << v;
         }
         M_LF = mds<INT_T>(I_LF,n,a,p,v,true,measurement_file);
 
-        std::string growth_factor = to_string_with_precision(std::ceil(M_LF.intervals()/(double) r * 1000.0)/1000.0,3);
+        growth_factor = to_string_with_precision(std::ceil(M_LF.intervals()/(double) r * 1000.0)/1000.0,3);
         if (measurement_file != NULL) {
             *measurement_file << " time_tot=" << time_diff(time) << " growth_factor=" << growth_factor << std::endl;
         }
-        time = log_runtime(time,"M_LF (" + growth_factor + ") calculated in");
-        r = M_LF.intervals();
+        time = log_runtime(time,"M_LF (r'/r = " + growth_factor + ") calculated in");
+        r_ = M_LF.intervals();
     }
 
     {
-        std::vector<std::pair<INT_T,INT_T>> *I_phi = new std::vector<std::pair<INT_T,INT_T>>(r);
+        std::vector<std::pair<INT_T,INT_T>> *I_phi = new std::vector<std::pair<INT_T,INT_T>>(r_);
         I_phi->at(0) = std::make_pair(SA[0],SA[n-1]);
         #pragma omp parallel for num_threads(p)
-        for (INT_T i=1; i<r; i++) {
+        for (INT_T i=1; i<r_; i++) {
             I_phi->at(i) = std::make_pair(SA[M_LF.pair(i).first],SA[M_LF.pair(i).first-1]);
         }
         auto comp = [](auto p1, auto p2){return p1.first < p2.first;};
@@ -148,11 +149,12 @@ void test(std::string &T, INT_T n, int a, int p, int v, std::chrono::steady_cloc
         }
         M_phi = mds<INT_T>(I_phi,n,a,p,v,true,measurement_file);
         
-        std::string growth_factor = to_string_with_precision(std::ceil(M_phi.intervals()/(double) r * 1000.0)/1000.0,3);
+        std::string growth_factor_1 = to_string_with_precision(std::ceil(M_phi.intervals()/(double) r_ * 1000.0)/1000.0,3);
+        std::string growth_factor_2 = to_string_with_precision(std::ceil(M_phi.intervals()/(double) r * 1000.0)/1000.0,3);
         if (measurement_file != NULL) {
-            *measurement_file << " time_tot=" << time_diff(time) << " growth_factor=" << growth_factor << std::endl;
+            *measurement_file << " time_tot=" << time_diff(time) << " growth_factor=" << growth_factor_1 << std::endl;
         }
-        time = log_runtime(time,"M_phi (" + growth_factor + ") calculated in");
+        time = log_runtime(time,"M_phi (r''/r' = " + growth_factor_1 + ", r''/r = " + growth_factor_2 + ") calculated in");
     }
 }
 
