@@ -63,12 +63,12 @@ class mdsb {
      * @param log enables log messages during build process
      * @param os output stream to write runtime and space usage to if log is enabled (default: NULL)
      */
-    mdsb<T>(mds<T> *mds, interv_seq<T> *I, T n, T a, int p, int v, bool log, std::ostream *os = NULL);
+    mdsb(mds<T> *mds, interv_seq<T> *I, T n, T a, int p, int v, bool log, std::ostream *os = NULL);
 
     /**
      * @brief deletes the mdsb
      */
-    ~mdsb<T>();
+    ~mdsb();
 
     /**
      * @brief prints messages for wrong pairs and unbalanced output intervals

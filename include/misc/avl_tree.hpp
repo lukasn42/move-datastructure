@@ -15,17 +15,17 @@ struct avl_node {
     /**
      * @brief creates an avl_node with value v
      */
-    avl_node<T>();
+    avl_node();
 
     /**
      * @brief creates an avl_node with value v
      */
-    avl_node<T>(T v);
+    avl_node(T v);
 
     /**
      * @brief deletes the avl_node
      */
-    ~avl_node<T>();
+    ~avl_node();
 
     /**
      * @brief returns the next avl_node in the avl_tree
@@ -150,7 +150,7 @@ class avl_tree {
      * @param gt comparison function "greater than" on values of type T
      * @param eq comparison function "equals" on values of type T
      */
-    avl_tree<T>(
+    avl_tree(
         std::function<bool(T&,T&)> lt,
         std::function<bool(T&,T&)> gt,
         std::function<bool(T&,T&)> eq
@@ -159,7 +159,7 @@ class avl_tree {
     /**
      * @brief deletes the avl_tree but not it's nodes
      */
-    ~avl_tree<T>();
+    ~avl_tree();
 
     /**
      * @brief returns the height of the avl_tree

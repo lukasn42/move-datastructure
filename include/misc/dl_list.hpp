@@ -13,17 +13,17 @@ struct dll_node {
     /**
      * @brief creates a dll_node with value v
      */
-    dll_node<T>();
+    dll_node();
 
     /**
      * @brief creates a dll_node with value v
      */
-    dll_node<T>(T v);
+    dll_node(T v);
 
     /**
      * @brief deletes the dll_node
      */
-    ~dll_node<T>();
+    ~dll_node();
 };
 
 /**

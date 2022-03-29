@@ -22,7 +22,7 @@ class mds {
     /**
      * @brief creates an empty move datastructure
      */
-    mds<T>();
+    mds();
 
     /**
      * @brief creates a move datastructure out of I by building L_in and T_out from I, balancing I and then building D_pair and D_index
@@ -35,18 +35,18 @@ class mds {
      * @param log enables log messages during build process (default: false)
      * @param os output stream to write runtime and space usage to if log is enabled (default: NULL)
      */
-    mds<T>(std::vector<std::pair<T,T>> *I, T n, T a = 2, int p = omp_get_max_threads(), int v = 3, bool log = false, std::ostream *os = NULL);
+    mds(std::vector<std::pair<T,T>> *I, T n, T a = 2, int p = omp_get_max_threads(), int v = 3, bool log = false, std::ostream *os = NULL);
 
     /**
      * @brief deletes the move datastructure
      */
-    ~mds<T>();
+    ~mds();
 
     /**
      * @brief creates a move datastructure from an input stream
      * @param in input stream
      */
-    mds<T>(std::istream &in);
+    mds(std::istream &in);
 
     /**
      * @brief writes the move_datastructure to ab output stream

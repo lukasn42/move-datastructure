@@ -5,8 +5,6 @@ project(mds LANGUAGES C CXX)
 
 find_package(TBB REQUIRED)
 
-
-
 # openmp
 find_package(OpenMP)
 

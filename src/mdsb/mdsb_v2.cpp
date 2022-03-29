@@ -166,4 +166,6 @@ void mdsb<T>::balance_v2() {
             }
         }
     }
+
+    delete nodes_te;
 }
