@@ -120,6 +120,9 @@ void mdsb<T>::build_lin_tout(interv_seq<T> *I) {
                 nodes[i_p]->at(i).v.pr = &nodes[i_p]->at(i-1).v;
                 nodes[i_p]->at(i-1).v.sc = &nodes[i_p]->at(i).v;
             }
+
+            #pragma omp barrier
+
             if (i_p != 0) {
                 nodes[i_p]->at(0).v.pr = &nodes[i_p-1]->at(k_p-1).v;
                 nodes[i_p-1]->at(k_p-1).v.sc = &nodes[i_p]->at(0).v;
