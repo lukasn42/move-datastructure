@@ -75,8 +75,7 @@ void mdsb<T>::balance_v3_par() {
     Q_ins = ins_matr_3<T>(p,std::vector<std::queue<ins_pair<T>>>(p));
     Q_ins_swap = ins_matr_3<T>(p,std::vector<std::queue<ins_pair<T>>>(p));
 
-    std::vector<bool> done_thr(p,true);
-    bool done;
+    uint8_t not_done = 0;
 
     #pragma omp parallel num_threads(p)
     {
@@ -122,16 +121,31 @@ void mdsb<T>::balance_v3_par() {
         pair_tree_node<T> *ptn_Y,*ptn_Y_nxt;
         T q_y;
 
-        #pragma omp barrier
+        while (true) {
+            #pragma omp barrier
 
-        #pragma omp single
-        {
-            std::swap(Q_ins,Q_ins_swap);
-        }
+            #pragma omp single
+            {
+                std::swap(Q_ins,Q_ins_swap);
+                not_done = 0;
+            }
 
-        #pragma omp barrier
+            #pragma omp barrier
 
-        do {
+            #pragma omp parallel for num_threads(p) reduction(max:not_done)
+            for (int i=0; i<p; i++) {
+                for (int j=0; j<p; j++) {
+                    if (!Q_ins_swap[i][j].empty() && not_done == 0) {
+                        not_done = 1;
+                        break;
+                    }
+                }
+            }
+
+            if (not_done == 0) {
+                break;
+            }
+
             for (int i=0; i<p; i++) {
                 while (!Q_ins_swap[i_p][i].empty()) {
                     pln_I = Q_ins_swap[i_p][i].front().first;
@@ -162,32 +176,6 @@ void mdsb<T>::balance_v3_par() {
                     }
                 }
             }
-
-            #pragma omp barrier
-
-            done_thr[i_p] = true;
-            for (int i=0; i<p; i++) {
-                if (!Q_ins[i_p][i].empty()) {
-                    done_thr[i_p] = false;
-                    break;
-                }
-            }
-
-            #pragma omp barrier
-
-            #pragma omp single
-            {
-                done = true;
-                for (int i=0; i<p; i++) {
-                    if (!done_thr[i]) {
-                        done = false;
-                        std::swap(Q_ins,Q_ins_swap);
-                        break;
-                    }
-                }
-            }
-
-            #pragma omp barrier
-        } while (!done);
+        }
     }
 }

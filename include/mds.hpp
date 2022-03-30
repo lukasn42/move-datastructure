@@ -4,8 +4,9 @@
 #include <mdsb.cpp>
 
 /**
- * @brief stores a bijective function f_I : [0..n-1] -> [0..n-1] as a balanced disjoint interval sequence B_I[0..k]
- *        (in the array D_pair), supports calculation of f_I(i) = i', with i in [0..n-1], by calculating Move(i,x) = (i',x')
+ * @brief stores a bijective function f_I : [0..n-1] -> [0..n-1] as a balanced disjoint interval
+ *        sequence B_I[0..k] (in the array D_pair), supports calculation of f_I(i) = i', with i
+ *        in [0..n-1], by calculating Move(i,x) = (i',x')
  * @tparam T (integer) type of the interval starting positions
  */
 template <typename T>
@@ -15,8 +16,11 @@ class mds {
     protected:
     T n; // maximum value, n = p_{k-1} + d_{k-1}, k <= n
     T k; // number of intervals in the balanced disjoint inteval sequence B_I, 0 < k
-    std::vector<std::pair<T,T>> D_pair; // stores the balanced disjoint inteval sequence B_I = ((p_0,q_0),(p_1,q_1),..,(p_{k-1},q_{k-1}))
-    std::vector<T> D_index; // D_index[j] = i <=> q_j in [p_i, p_i + d_i - 1], with i,j in [0..k-1]
+    /** @brief stores the balanced disjoint inteval sequence B_I = ((p_0,q_0),(p_1,q_1),..,
+     *         (p_{k-1},q_{k-1})) */
+    std::vector<std::pair<T,T>> D_pair;
+    /** @brief D_index[j] = i <=> q_j in [p_i, p_i + d_i - 1], with i,j in [0..k-1] */
+    std::vector<T> D_index;
 
     public:
     /**
@@ -25,7 +29,8 @@ class mds {
     mds();
 
     /**
-     * @brief creates a move datastructure out of I by building L_in and T_out from I, balancing I and then building D_pair and D_index
+     * @brief creates a move datastructure out of I by building L_in and T_out from I, balancing
+     *        I and then building D_pair and D_index
      * @param I disjoint interval sequence I
      * @param n n = p_{k-1} + d_{k-1}, k <= n
      * @param a (optional) balancing parameter, balancing parameter, restricts size increase
@@ -35,7 +40,15 @@ class mds {
      * @param log enables log messages during build process (default: false)
      * @param os output stream to write runtime and space usage to if log is enabled (default: NULL)
      */
-    mds(std::vector<std::pair<T,T>> *I, T n, T a = 2, int p = omp_get_max_threads(), int v = 3, bool log = false, std::ostream *os = NULL);
+    mds(
+        std::vector<std::pair<T,T>> *I,
+        T n,
+        T a = 2,
+        int p = omp_get_max_threads(),
+        int v = 3,
+        bool log = false,
+        std::ostream *os = NULL
+    );
 
     /**
      * @brief deletes the move datastructure
